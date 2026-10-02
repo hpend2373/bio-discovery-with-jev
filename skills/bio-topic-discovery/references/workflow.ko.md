@@ -23,4 +23,6 @@ python3 scripts/run.py status --out /absolute/new-run
 
 `run --retry-failed`는 원인 해결 후만 사용합니다. 전수 실패는 verification.json과 개별 error로 확인합니다. 모델 가중치·서버·컨테이너를 임의로 변경하지 않습니다. 로컬 토크나이저 검증을 실행하려면 해당 컨테이너에 대한 읽기·실행 접근이 필요합니다.
 
-최종 파일: REPORT.ko.md, candidates.csv, candidates.jsonl, decisions.jsonl, verification.json, SYSTEM2-REVIEW.ko.md. 실제 응답이 모든 계획된 과제에 결합되었는지 verify가 검사합니다. 후보 선택 확률은 해당 가설의 참일 확률이 아닙니다.
+기본 결과물: `candidates.csv`. 모든 후보와 원본 연결, 관측 근거, 한계, 반증·확인 사항, 검사·검증 상태를 담습니다. 최종 답변에 절대 경로 파일 링크를 제공합니다. 실행 응답의 `candidate_csv`에 경로가 있으며, `report --out PATH`는 검증 후 파일만 다시 내보냅니다. 복합 셀은 JSON이고 원본 ID는 세미콜론으로 구분하며 UTF-8 BOM을 사용합니다. 헤더만 있는 CSV는 선택된 후보가 없다는 뜻이며 `candidate-summary.json`과 검증 상태도 확인합니다.
+
+보조 자료: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, `SYSTEM2-REVIEW.ko.md`. 실제 응답이 모든 계획된 과제에 결합되었는지 verify가 검사합니다. 선택 확률은 과학적 진실 확률이 아닙니다.

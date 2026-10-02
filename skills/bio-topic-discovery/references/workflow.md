@@ -23,4 +23,6 @@ New run directories contain frozen input, `profile.json`, `records.json`, a code
 
 Use `run --retry-failed` only after resolving causes. Check `verification.json` and individual errors. Do not change model weights, servers, or containers without authorization. Local tokenizer verification needs read/execute access to the configured container.
 
-Final files include `REPORT.ko.md`, `candidates.csv`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, and `SYSTEM2-REVIEW.ko.md`. Verification checks that actual responses bind to every planned task. A candidate's choice probability is not the probability that its hypothesis is true.
+Primary deliverable: `candidates.csv`. It retains every candidate with source links, observations, limits, falsification/confirmation fields, and inspection/verification status. Deliver an absolute file link in the final answer. The run response returns `candidate_csv`; `report --out PATH` regenerates exports only after verification. Structured cells are JSON, record IDs are separated by semicolons, and UTF-8 BOM supports spreadsheet readers. A header-only file means no selected candidates; check `candidate-summary.json` and verification before interpreting it.
+
+Supporting files: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, and `SYSTEM2-REVIEW.ko.md`. Verification binds actual responses to every planned task. A choice probability is not a scientific truth probability.
