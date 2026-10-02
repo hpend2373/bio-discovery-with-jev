@@ -1,4 +1,4 @@
 interface:
   display_name: "Bio Topic Discovery"
-  short_description: "Inspect DEG and meta-analysis evidence exhaustively with Laya or Jev"
-  default_prompt: "Use $bio-topic-discovery to define exhaustive inspection scope for my data and identify evidence-linked research candidates. Respond in my language."
+  short_description: "Inspect biological evidence with Laya/Jev and deliver CSV"
+  default_prompt: "Use $bio-topic-discovery to define exhaustive inspection scope for my data and deliver all evidence-linked research candidates as a CSV file. Respond in my language."
