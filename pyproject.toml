@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bio-topic-discovery"
+version = "0.1.1"
+description = "Exhaustive, auditable Laya/Jev inspection of biological evidence"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6"]
+readme = "README.md"
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.8"]
+
+[project.scripts]
+bio-topics = "bio_topics.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bio_topics*"]
