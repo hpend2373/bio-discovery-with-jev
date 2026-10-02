@@ -30,7 +30,7 @@ def main():
     if {(r["sample_index"], r["repeat"], r["kind"]) for r in rows if r["provider"] == "laya"} != {(r["sample_index"], r["repeat"], r["kind"]) for r in rows if r["provider"] == "llm"}:
         raise ValueError("Unmatched input sets")
     totals = {p: sum(r["seconds"] for r in rows if r["provider"] == p) for p in ("laya", "llm")}
-    means = {p: {k: statistics.mean(r["seconds"] for r in rows if r["provider"] == p and r["kind"] == k)
+    means = {p: {k: statistics.mean(r["seconds"] for r in rows if r["provider"] == p and r["kind"] == k and r["repeat"] == 0)
                  for k in data["population_units"]} for p in totals}
     projected = {p: sum(means[p][k] * n for k, n in data["population_units"].items()) / 60 for p in totals}
     font_manager.fontManager.addfont(args.font)
@@ -38,13 +38,18 @@ def main():
                          "axes.unicode_minus": False, "font.size": 13, "axes.titlesize": 16,
                          "figure.facecolor": "white", "text.color": "#253043"})
     colors = ["#315C9D", "#C28B2C"]
-    names = ["Laya multilingual\nGPU", "일반 LLM\n" + data["llm"]["name"] + " · CPU"]
+    devices = data.get("hardware", {}).get("provider_devices", {})
+    labels = {"cuda": "GPU", "cpu": "CPU"}
+    device_names = {p: labels.get(devices.get(p), "장치 미기록") for p in totals}
+    names = ["Laya multilingual\n" + device_names["laya"],
+             "일반 LLM\n" + data["llm"]["name"] + " · " + device_names["llm"]]
+    population_total = sum(data["population_units"].values())
     fig, axes = plt.subplots(1, 2, figsize=(14, 8))
     fig.suptitle("Laya와 일반 LLM의 동일 판단 작업 소요 시간", x=.06, ha="left", y=.96, fontsize=22)
     fig.text(.06, .89, f"실제 데이터 표본 {data['sample_unique_units']}개 × {data['repeats']}회 · 모델별 {expected}요청 · 요청당 {data['questions_per_request']}개 선택형 판단", fontsize=13)
     for ax, values, title, unit in (
             (axes[0], list(totals.values()), "실측: 동일 표본의 총 요청 시간", "초"),
-            (axes[1], list(projected.values()), "추정: 전체 7,005개 근거 단위", "분")):
+            (axes[1], list(projected.values()), f"추정: 첫 평가 기준 전체 {population_total:,}개", "분")):
         bars = ax.bar(range(2), values, color=colors, width=.48)
         ax.set_xticks(range(2), names)
         ax.set_ylabel("소요 시간 (" + unit + ")")
@@ -61,7 +66,7 @@ def main():
     ratio = totals["llm"] / totals["laya"]
     delta = totals["llm"] - totals["laya"]
     fig.text(.06, .28, f"이 표본에서 일반 LLM / Laya 시간 비율: {ratio:.2f}배 · 일반 LLM − Laya: {delta:+.1f}초", fontsize=15)
-    fig.text(.06, .215, "전체 추정 = 행·셀·행 쌍별 실측 평균 × 각 전체 단위 수. 전체 LLM 전수 실행 결과가 아닙니다.", fontsize=12)
+    fig.text(.06, .215, "전체 추정 = 첫 평가의 행·셀·쌍별 평균 × 각 전체 단위 수. 반복 캐시 효과를 혼합하지 않았습니다.", fontsize=12)
     fig.text(.06, .17, "워밍업·모델 로드 제외 / 동시 요청 1 / Qwen thinking=false / 두 모델에 같은 전체 근거·질문 제공", fontsize=12)
     fig.text(.06, .125, "Laya는 GPU, 현재 Ollama Qwen은 CPU 실행. 이 설치의 비교이며 모델 자체의 속도 차이로 일반화할 수 없습니다.", fontsize=12)
     fig.text(.06, .08, "기존 Laya 143.6분은 중단·재개·검증을 포함해 이 실측과 직접 비교하지 않습니다. 속도는 발굴 품질을 뜻하지 않습니다.", fontsize=11)
