@@ -1,0 +1,25 @@
+schema_version: 1
+domain: deg
+synthetic_example: true
+question: "세포 유형별 DEG 변화에서 추가 검증할 연구 질문을 찾는다."
+columns:
+  study_id: study
+  entity_id: gene
+  cell_type: cell
+  comparison: comparison
+  log2fc: log2FC
+  fdr: FDR
+  hold_reason: hold_reason
+declarations:
+  species: human
+inspection:
+  cell_fields: [study_id, cell_type, comparison]
+  pairs: within_groups
+  pair_group_by: [study_id, entity_id, comparison]
+  operators: [integrity, heterogeneity, robustness, bias, gap, generalizability, contradiction, decision]
+backend:
+  kind: laya
+  url: http://127.0.0.1:8000
+  model: multilingual
+  max_len: 4096
+  head_max_len: 384

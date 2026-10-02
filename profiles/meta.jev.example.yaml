@@ -1,0 +1,71 @@
+schema_version: 1
+domain: meta
+synthetic_example: true
+question: 노출 시점과 보정 선택이 관찰연구 결과의 해석에 미치는 영향을 탐색한다.
+columns:
+  study_id: study
+  publication_id: publication
+  cohort_ids: cohorts
+  exposure_timing: timing
+  comparator_type: comparator
+  treatment_stage: stage
+  outcome_family: outcome
+  outcome_definition: definition
+  outcome_time: follow_up
+  estimand: estimand
+  time_zero: time_zero
+  measure: measure
+  value: value
+  ci_lower: lower
+  ci_upper: upper
+  ci_level: ci_level
+  model: model
+  synthesis_approved: approved
+  source_blocked: blocked
+  hold_reason: hold_reason
+declarations:
+  design: observational
+  ci_method: wald
+  ci_distribution: normal
+inspection:
+  cell_fields:
+  - outcome_family
+  - exposure_timing
+  - comparator_type
+  - treatment_stage
+  - measure
+  pairs: within_groups
+  pair_group_by:
+  - outcome_family
+  operators:
+  - integrity
+  - heterogeneity
+  - robustness
+  - bias
+  - gap
+  - generalizability
+  - contradiction
+  - decision
+synthesis:
+  enabled: true
+  policy: one_per_dependency_component
+  required_fields:
+  - study_id
+  - cohort_ids
+  - exposure_timing
+  - comparator_type
+  - treatment_stage
+  - outcome_family
+  - outcome_definition
+  - outcome_time
+  - estimand
+  - time_zero
+  methods:
+  - fixed_iv
+  ci_level: 0.95
+  leave_one_component_out: true
+backend:
+  kind: jev
+  model: jev-1.13.0
+  max_body_bytes: 262144
+  timeout: 45
