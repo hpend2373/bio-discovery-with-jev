@@ -1,49 +1,11 @@
-# 실제 데이터 시험 집계 — 2026-10-01
+# Computing time and result interpretation
 
-요청한 일반 LLM과의 소요 시간 차이는 별도의 [2026-10-02 실측 및 PNG](LATENCY.ko.md)에 있습니다. 아래 기존 그림은 검사 완료 상태·판정 분포를 설명하는 보조 자료입니다.
+**English** | [한국어](README.ko.md)
 
-이 폴더는 집계값과 그 값을 재현한 PNG 그래프만 담습니다. 원본 CSV, 개인 경로, 추출 근거 행, API 키와 전체 모델 응답은 배포 자료에 포함하지 않습니다.
+The public evaluation materials contain a matched GPU timing comparison, aggregate response checks, and the limits of interpreting those results.
 
-## 범위와 결과
+- [Computing time and interpretation](LATENCY.md)
+- [Measured time figure](latency-comparison.png)
+- [Aggregate timing records](latency-results.json)
 
-- 로컬 Laya multilingual, 리비전 `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851`.
-- 원본 1,790행, 조건별 셀 533개, 선언된 행 쌍 4,682개.
-- 쌍 조건: 같은 논문 식별자·결과명·노출군·노출 시점·비교군 유형·인구 하위군. 전체 가능한 모든 행 쌍은 아닙니다.
-- 근거 단위 7,005개 × 8관점 = 56,040개 과제. 각 과제는 탐색·초점의 두 선택형 판단으로 구성됩니다.
-- 56,040개 실제 판정 성공, 실패·미검사 0, 전수 기록 검증 통과. 원본 열·값 보존 대조도 통과했습니다.
-- 경과 143.6분은 중단·재개·검증을 포함합니다. 순수 추론 시간이나 다른 장비의 속도 벤치마크가 아닙니다.
-
-| 검사 대상 | candidate | needs_data | background |
-|---|---:|---:|---:|
-| 원본 행 | 1,070 | 13,237 | 13 |
-| 셀 | 1,958 | 1,851 | 455 |
-| 행 쌍 | 694 | 36,754 | 8 |
-| 전체 | 3,722 | 51,842 | 476 |
-
-## 품질 판정
-
-**전수 기록 검증은 통과했습니다. 구체적인 연구 질문 발굴 품질은 현재 구현에서 미달입니다.**
-
-1. 모든 행의 합성 관련 경고가 가설 분류를 막아 55,564개 비배경 판정이 모두 ‘추가 확인’으로 출력됐습니다.
-2. 제목은 고정 문구 52종이고 구체적인 변수·비교 조건·반증 조건을 모델이 작성하지 않습니다.
-3. 셀 카드는 실제 효과·보정 차이를 충분히 전달하지 못합니다.
-4. CI 방법 미상인 일부 행에서 점추정치가 기록된 CI 밖이라는 점검 신호를 별도로 표시하지 못했습니다.
-
-위 결함을 확인하기 위한 구조 검사 5개는 모두 실패했습니다. 일반 단위 테스트의 통과율과 과학적 성능을 혼동하지 않습니다. 후보 표시 개수·확률은 서로 다른 연구 주제 개수·신규성·과학적 진실 확률이 아닙니다.
-
-![검사 범위와 완료 상태](inspection-coverage.png)
-
-![모델 판정 분포](model-decisions.png)
-
-## 재현
-
-차트의 수치 출처는 [test-metrics.json](test-metrics.json)입니다. 한국어 글리프가 있는 Noto Sans CJK KR 또는 다른 한국어 폰트 파일을 준비한 뒤:
-
-```bash
-python -m pip install -e '.[plots]'
-python scripts/plot_evaluation.py --font /path/to/Korean-font.otf
-```
-
-폰트는 [Noto 공식 저장소](https://github.com/notofonts/noto-cjk)에서 별도로 구할 수 있습니다. 폰트와 모델 가중치는 이 저장소에 포함하지 않습니다. 차트는 집계값의 합·분모 일치를 검사하고 생성합니다.
-
-이 파일들만으로 원본 행·모델 응답의 해시를 다시 검증할 수는 없습니다. 원본과 응답을 가진 로컬 실행에서 검증한 결과의 집계 기록입니다. 벤치마크 당시 동결 소스 해시는 `test-metrics.json`에 있으며, v0.1.1의 이식성·Jev 계약 개선 이전 실행입니다. Jev 실제 호출 및 새 버전의 실제 데이터 전수 재시험은 수행하지 않았습니다.
+The figure shows measured request time only. Its caption, protocol, and interpretation are in the document. Dataset descriptions, source records, study identifiers, project-specific analysis counts, and full model responses are excluded.
