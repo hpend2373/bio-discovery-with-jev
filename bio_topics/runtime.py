@@ -237,4 +237,5 @@ def run(out, allow_external=False, retry_failed=False, backend=None):
                     updated=now(), counts=result["counts"], verification=result["status"])
     write_json(out / "manifest.json", manifest)
     candidate_count = export_report(out)
-    return {**result, "run": str(out), "candidates": candidate_count}
+    return {**result, "run": str(out), "candidates": candidate_count,
+            "candidate_csv": str((out / "candidates.csv").resolve())}

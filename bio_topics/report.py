@@ -23,11 +23,36 @@ TEMPLATES = {
     "mechanism": "선언된 {focus}가 관측된 변화를 연결하며 후속 실험에서 검증되는가?",
 }
 
+CSV_COLUMNS = ["rank", "id", "route", "operator", "focus", "question", "scope_text", "record_ids",
+               "observations", "limits", "falsification", "required_checks", "model_choice",
+               "model_selection_probability", "status", "model", "job_id", "unit_id", "scope",
+               "inspection_status", "verification_status", "inspection_coverage"]
+
+
+def write_candidate_csv(candidates, path, inspection_status, verification_status, coverage):
+    """Write the primary deliverable, including evidence and incomplete-run status.
+
+    Structured cells use JSON; source record IDs use semicolons. UTF-8 BOM
+    keeps Korean text readable in spreadsheet applications. An empty result
+    still has its header and never invents a candidate.
+    """
+    with Path(path).open("w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        for candidate in candidates:
+            row = {**candidate, "record_ids": ";".join(candidate["record_ids"]),
+                   "inspection_status": inspection_status, "verification_status": verification_status,
+                   "inspection_coverage": coverage}
+            for field in ("scope", "observations", "limits", "required_checks"):
+                row[field] = canonical(candidate.get(field, [] if field != "scope" else {}))
+            writer.writerow(row)
+
 
 def export_report(out):
     out = Path(out)
     records = json.loads((out / "records.json").read_text())
     by_id = {r["id"]: r for r in records}
+    facts = {r["id"]: record_facts(r) for r in records}
     profile = json.loads((out / "profile.json").read_text())
     db = connect(out / "inspection.sqlite3")
     buckets = defaultdict(list)
@@ -45,10 +70,16 @@ def export_report(out):
                 continue
             focus = answers["focus"]["choice"]
             sources = [by_id[rid] for rid in unit["record_ids"]]
-            unresolved = any(record_facts(r)["issues"] or r["fields"].get("source_blocked") is True
+            unresolved = any(facts[r["id"]]["issues"] or r["fields"].get("source_blocked") is True
                              or r["fields"].get("hold_reason") for r in sources)
+            required_checks = [{"record_id": r["id"], "issues": facts[r["id"]]["issues"],
+                                "source_blocked": r["fields"].get("source_blocked", False),
+                                "hold_reason": r["fields"].get("hold_reason", "")}
+                               for r in sources if facts[r["id"]]["issues"]
+                               or r["fields"].get("source_blocked") is True or r["fields"].get("hold_reason")]
             if focus == "mechanism" and not profile.get("knowledge_relations"):
                 unresolved = True
+                required_checks.append({"issue": "sourced_knowledge_relations_required"})
             route = "추가 확인" if choice == "needs_data" or unresolved else "연구 가설"
             scope_text = ", ".join(f"{k}={v}" for k, v in unit["scope"].items())
             entities = sorted({r["fields"]["entity_id"] for r in sources if r["fields"].get("entity_id")})
@@ -61,7 +92,8 @@ def export_report(out):
                          "record_ids": unit["record_ids"], "observations": unit["state"]["observations"],
                          "model_choice": choice, "model_selection_probability": answers["discovery"]["probabilities"][choice],
                          "status": "system2_and_human_review_pending", "falsification": "대안 설명과 반증 조건은 근거를 읽고 추가 작성해야 함",
-                         "limits": unit["state"]["limits"], "model": receipt["payload"]["model"]}
+                         "limits": unit["state"]["limits"], "required_checks": required_checks,
+                         "model": receipt["payload"]["model"]}
             buckets[(route, row["operator"])].append(candidate)
     # Round-robin diversity ordering after every inspection, retaining every detected candidate.
     for bucket in buckets.values():
@@ -78,20 +110,17 @@ def export_report(out):
         for rank, candidate in enumerate(candidates, 1):
             candidate["rank"] = rank
             handle.write(canonical(candidate) + "\n")
-    columns = ["rank", "id", "route", "operator", "focus", "question", "scope_text", "record_ids",
-               "model_choice", "model_selection_probability", "status"]
-    with (out / "candidates.csv").open("w", newline="", encoding="utf-8-sig") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        for c in candidates:
-            writer.writerow({**c, "record_ids": ";".join(c["record_ids"])})
     stats = counts(db)
     manifest = json.loads((out / "manifest.json").read_text())
+    verification = (json.loads((out / "verification.json").read_text())
+                    if (out / "verification.json").exists() else {"status": "not_verified"})
+    write_candidate_csv(candidates, out / "candidates.csv", manifest["status"], verification["status"], stats["coverage"])
     lines = ["# 전수 검사 결과", "", "입력은 " + ("합성 예제입니다." if profile.get("synthetic_example") else "제공된 프로젝트 데이터입니다."),
              "", f"검사 상태: **{manifest['status']}**", f"검사: {stats['successful']}/{stats['planned']} ({stats['coverage']:.2%})",
              f"실제 평가 {stats['evaluated']}, 검증된 캐시 {stats['cached']}, 실패 {stats['failed']}, 미검사 {stats['pending']}",
              f"모델이 표시한 후보·추가 확인 항목: {len(candidates)}개", "",
-             "모든 후보를 아래와 CSV/JSONL에 수록했습니다. 순위 확률은 과학적 참일 확률이 아닙니다.",
+             "기본 결과물은 candidates.csv입니다. 모든 후보를 CSV에 수록했으며 JSONL과 아래 보고서는 보조 자료입니다.",
+             "순위 확률은 과학적 참일 확률이 아닙니다.",
              "문헌 확인·System 2 해석·사람의 채택은 아직 완료되지 않았습니다.", "",
              "## 후보", ""]
     for c in candidates:
@@ -112,6 +141,8 @@ def export_report(out):
         "6. 후보를 수정한 뒤 속성·출처·수치·승인 상태를 재검토한다. 모델 판정을 생물학적 확인으로 쓰지 않는다.\n"
         "7. 사람의 채택·기각·보류는 실제 사용자의 결정을 별도 기록한다.\n")
     write_json(out / "candidate-summary.json", {"total": len(candidates), "by_route": dict(__import__('collections').Counter(c["route"] for c in candidates)),
-                                               "all_candidates_exported": True, "downstream_review": "pending"})
+                                               "all_candidates_exported": True, "primary_output": "candidates.csv",
+                                               "inspection_status": manifest["status"], "verification_status": verification["status"],
+                                               "downstream_review": "pending"})
     db.close()
     return len(candidates)

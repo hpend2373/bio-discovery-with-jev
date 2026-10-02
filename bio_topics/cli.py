@@ -35,7 +35,8 @@ def main(argv=None):
             if result["status"] != "verified":
                 raise ValueError("검증 실패 결과를 최종 보고서로 내보낼 수 없습니다. 기존 임시 보고서를 확인하세요.")
             from .report import export_report
-            result = {"candidates": export_report(args.out), "status": "exported"}
+            result = {"candidates": export_report(args.out), "status": "exported",
+                      "candidate_csv": str((Path(args.out) / "candidates.csv").resolve())}
         else:
             db = connect(Path(args.out) / "inspection.sqlite3")
             result = {"manifest": json.loads((Path(args.out) / "manifest.json").read_text()), "counts": counts(db)}
