@@ -68,7 +68,7 @@ def main():
     fig.text(.06, .28, f"이 표본에서 일반 LLM / Laya 시간 비율: {ratio:.2f}배 · 일반 LLM − Laya: {delta:+.1f}초", fontsize=15)
     fig.text(.06, .215, "전체 추정 = 첫 평가의 행·셀·쌍별 평균 × 각 전체 단위 수. 반복 캐시 효과를 혼합하지 않았습니다.", fontsize=12)
     fig.text(.06, .17, "워밍업·모델 로드 제외 / 동시 요청 1 / Qwen thinking=false / 두 모델에 같은 전체 근거·질문 제공", fontsize=12)
-    fig.text(.06, .125, "Laya는 GPU, 현재 Ollama Qwen은 CPU 실행. 이 설치의 비교이며 모델 자체의 속도 차이로 일반화할 수 없습니다.", fontsize=12)
+    fig.text(.06, .125, f"실행 장치: Laya {device_names['laya']}, Qwen {device_names['llm']}. 모델별 단독 적재. 이 표본과 설치에서 측정한 시간입니다.", fontsize=12)
     fig.text(.06, .08, "기존 Laya 143.6분은 중단·재개·검증을 포함해 이 실측과 직접 비교하지 않습니다. 속도는 발굴 품질을 뜻하지 않습니다.", fontsize=11)
     fig.text(.06, .035, f"2026-10-02 · LLM은 선택 ID 생성, Laya는 확률도 반환 · 네이티브 KV 캐시 허용 · Jev 미측정", fontsize=11)
     fig.subplots_adjust(left=.09, right=.95, top=.77, bottom=.40, wspace=.30)
