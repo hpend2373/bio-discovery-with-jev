@@ -1,4 +1,4 @@
 interface:
-  display_name: "바이오 연구 후보 전수 검사"
-  short_description: "DEG와 메타분석 근거를 Laya/Jev로 전수 검사하고 연구 후보를 찾습니다"
-  default_prompt: "$bio-topic-discovery를 사용해 제공한 데이터의 전수 검사 범위를 정하고 연구 후보를 찾아줘."
+  display_name: "Bio Topic Discovery"
+  short_description: "Inspect DEG and meta-analysis evidence exhaustively with Laya or Jev"
+  default_prompt: "Use $bio-topic-discovery to define exhaustive inspection scope for my data and identify evidence-linked research candidates. Respond in my language."
