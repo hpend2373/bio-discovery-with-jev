@@ -1,4 +1,4 @@
-# 바이오 연구 후보 전수 검사 — v0.1.1
+# 바이오 연구 후보 전수 검사 — v0.1.2
 
 [English](README.md) | **한국어**
 
@@ -108,10 +108,12 @@ PYTHONPATH=/절대경로/실행폴더/source python3 -m bio_topics run --out /�
 
 ## 출력과 후속 검토
 
-- `REPORT.ko.md`: 모든 발견 후보·추가 확인 항목.
-- `candidates.csv` / `candidates.jsonl`: 모든 후보, 원본 행 ID와 모델 판단의 연결.
+- **`candidates.csv`: 기본 결과물.** 후보별 질문, 범위, 원본 행 ID, 관측 근거, 한계, 반증 조건, 추가 확인 사항, 모델 판단과 검사·검증 상태를 담습니다. 모든 후보·추가 확인 항목을 유지합니다. 실행 완료 시 자동 생성하고 `candidate_csv`로 절대 경로를 반환합니다.
+- `REPORT.ko.md` / `candidates.jsonl`: 보조 보고서와 구조화 기록.
 - `decisions.jsonl` / `inspection.sqlite3`: 후보 없음까지 포함한 전체 판단 기록.
 - `SYSTEM2-REVIEW.ko.md`: 문헌·기전·반증 조건·후속 실험 검토 절차.
+
+검증된 실행의 CSV만 다시 내보내려면 `bio-topics report --out runs/실행폴더`를 사용합니다. 모델을 다시 호출하지 않습니다. CSV는 영문 열 이름과 UTF-8 BOM 인코딩을 사용하고, 복합 근거 셀은 JSON입니다. [후보 CSV 필드 안내](docs/candidate-csv.ko.md)를 참고하세요.
 
 후보 제목은 모델이 선택한 연산자와 초점을 연구 질문으로 표현한 것입니다. 자유로운 기전 서술이나 신규성 검증을 자동 완료한 것으로 보지 않습니다. 확률은 선택 확률이며 가설의 과학적 진실 확률이 아닙니다.
 

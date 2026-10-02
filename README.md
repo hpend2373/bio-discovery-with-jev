@@ -89,7 +89,16 @@ CSV/Excel → mapping and preserved source values → deterministic facts
 
 ## Outputs and supported scope
 
-The engine writes all candidates and follow-up items to `REPORT.ko.md`, `candidates.csv`, and `candidates.jsonl`. Full decision records are available in `decisions.jsonl` and `inspection.sqlite3`; `verify` checks response completeness and evidence bindings.
+**`candidates.csv` is the primary deliverable.** Each row is a candidate or an item requiring additional confirmation, with its question, evidence links, observations, limitations, falsification note, required checks, model judgment, and inspection/verification status. All candidates are retained. `run` writes the CSV automatically and returns its absolute path as `candidate_csv`.
+
+```bash
+# Regenerate the CSV from a verified run, without another model call.
+bio-topics report --out runs/YOUR_RUN
+```
+
+The CSV uses English field names and UTF-8 with BOM for spreadsheet compatibility; current generated questions use Korean. Structured evidence cells contain JSON. [CSV field guide](docs/candidate-csv.md) · [한국어](docs/candidate-csv.ko.md).
+
+`REPORT.ko.md` and `candidates.jsonl` are supporting outputs. Full decision records remain in `decisions.jsonl` and `inspection.sqlite3`; `verify` checks response completeness and evidence bindings.
 
 Inputs include CSV/TSV/XLSX. The engine supports DEG evidence, meta-analysis evidence, declared comparisons, and limited compatible inverse-variance synthesis. Meta-regression, diagnostic-accuracy joint synthesis, complex covariance models, and automatic splitting of long evidence cards are not implemented. Unknown scientific metadata stays unknown.
 
