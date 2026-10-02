@@ -1,3 +1,4 @@
+import csv
 import json
 import sqlite3
 import tempfile
@@ -146,6 +147,45 @@ class RuntimeTests(unittest.TestCase):
         result = run(self.out, retry_failed=True, backend=resumed)
         self.assertEqual(resumed.calls, 1)
         self.assertEqual(result["counts"]["failed"], 0)
+
+    def test_candidate_csv_preserves_evidence_and_marks_partial_run(self):
+        result = run(self.out, backend=TestBackend(fail_at=3))
+        self.assertEqual(result["candidate_csv"], str((self.out / "candidates.csv").resolve()))
+        self.assertTrue((self.out / "candidates.csv").read_bytes().startswith(b"\xef\xbb\xbf"))
+        with (self.out / "candidates.csv").open(encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        details = [json.loads(line) for line in (self.out / "candidates.jsonl").read_text().splitlines()]
+        self.assertEqual(len(rows), result["candidates"])
+        self.assertEqual(len(rows), len(details))
+        self.assertGreater(len(rows), 0)
+        self.assertLess(result["counts"]["coverage"], 1)
+        for row, detail in zip(rows, details):
+            self.assertEqual(row["id"], detail["id"])
+            self.assertEqual(row["record_ids"].split(";"), detail["record_ids"])
+            self.assertEqual(row["question"], detail["question"])
+            self.assertEqual(row["falsification"], detail["falsification"])
+            for field in ("scope", "observations", "limits", "required_checks"):
+                self.assertEqual(json.loads(row[field]), detail[field])
+            self.assertEqual(row["inspection_status"], "incomplete")
+            self.assertEqual(row["verification_status"], "incomplete_or_invalid")
+            self.assertEqual(float(row["inspection_coverage"]), result["counts"]["coverage"])
+
+    def test_no_candidates_csv_has_header_without_inventing_rows(self):
+        class BackgroundBackend(TestBackend):
+            def evaluate(self, state, qs):
+                receipt = super().evaluate(state, qs)
+                for name, answer in receipt["payload"]["answers"].items():
+                    if name.endswith("__discovery"):
+                        answer["choice"] = "background"
+                        answer["probabilities"] = {key: float(key == "background") for key in qs[name]["criteria"]}
+                return receipt
+        result = run(self.out, backend=BackgroundBackend())
+        self.assertEqual(result["candidates"], 0)
+        with (self.out / "candidates.csv").open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            self.assertIn("question", reader.fieldnames)
+            self.assertIn("verification_status", reader.fieldnames)
+            self.assertEqual(list(reader), [])
 
     def test_interrupt_preserves_successful_receipts(self):
         with self.assertRaises(KeyboardInterrupt):
