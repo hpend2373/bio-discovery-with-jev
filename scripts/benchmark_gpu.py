@@ -62,16 +62,25 @@ def main():
                 while True:
                     try:
                         health = http_json('http://127.0.0.1:8000/health', timeout=3)
-                        if health.get('checkpoint_devices', {}).get('multilingual') == 'cuda':
+                        if health.get('status') == 'ok' and health.get('device') == 'cuda':
                             break
                     except Exception:
                         pass
                     if time.monotonic()>deadline:
                         raise RuntimeError('Laya GPU health not ready')
                     time.sleep(2)
+                if not health.get('revisions', {}).get('multilingual'):
+                    started = time.perf_counter()
+                    http_json('http://127.0.0.1:8000/v1/systemone', {
+                        'model':'multilingual', 'state':'Synthetic GPU startup readiness probe.',
+                        'questions':{'probe':{'type':'choice','instructions':'Is study evidence available?',
+                            'criteria':{'yes':'Study evidence available','no':'No study evidence'}}},
+                        'max_len':4096, 'head_max_len':384})
+                    result['warmups'].append({'provider':'laya_startup',
+                        'seconds':time.perf_counter()-started, 'synthetic':True})
                 backend = HTTPBackend(profile['backend'])
                 result['laya_identity'] = backend.identity
-                result['gpu_verification']['laya_health'] = health
+                # Check actual loaded checkpoint after the first evaluation (lazy loading).
             start = time.perf_counter()
             unit = selected[-1]
             if provider == 'llm':
@@ -79,6 +88,10 @@ def main():
                 validate_llm(warm, questions, model)
             else:
                 warm = backend.evaluate(unit['state'], questions)
+                health = http_json('http://127.0.0.1:8000/health')
+                if health.get('checkpoint_devices', {}).get('multilingual') != 'cuda':
+                    raise RuntimeError('Laya checkpoint did not load on GPU')
+                result['gpu_verification']['laya_health'] = health
             result['warmups'].append({'provider':provider, 'seconds':time.perf_counter()-start,
                                       'load_seconds':warm.get('load_duration',0)/1e9})
             (args.out/f'private-{provider}-warmup.json').write_text(json.dumps(warm, ensure_ascii=False))
