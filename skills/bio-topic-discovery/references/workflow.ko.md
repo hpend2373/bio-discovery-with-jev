@@ -26,3 +26,5 @@ python3 scripts/run.py status --out /absolute/new-run
 기본 결과물: `candidates.csv`. 모든 후보와 원본 연결, 관측 근거, 한계, 반증·확인 사항, 검사·검증 상태를 담습니다. 최종 답변에 절대 경로 파일 링크를 제공합니다. 실행 응답의 `candidate_csv`에 경로가 있으며, `report --out PATH`는 검증 후 파일만 다시 내보냅니다. 복합 셀은 JSON이고 원본 ID는 세미콜론으로 구분하며 UTF-8 BOM을 사용합니다. 헤더만 있는 CSV는 선택된 후보가 없다는 뜻이며 `candidate-summary.json`과 검증 상태도 확인합니다.
 
 보조 자료: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, `SYSTEM2-REVIEW.ko.md`. 실제 응답이 모든 계획된 과제에 결합되었는지 verify가 검사합니다. 선택 확률은 과학적 진실 확률이 아닙니다.
+
+메타분석의 기본 논문 수 가중치는 0.25입니다. 새 프로파일의 `ranking.paper_count_weight`(0~1)로 조정합니다. 수식·중복·상태 기준과 CSV 열은 `docs/candidate-csv.ko.md`를 참고하세요. 모델 검사 후 후보 순서에만 적용합니다.

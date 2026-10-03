@@ -26,3 +26,5 @@ Use `run --retry-failed` only after resolving causes. Check `verification.json` 
 Primary deliverable: `candidates.csv`. It retains every candidate with source links, observations, limits, falsification/confirmation fields, and inspection/verification status. Deliver an absolute file link in the final answer. The run response returns `candidate_csv`; `report --out PATH` regenerates exports only after verification. Structured cells are JSON, record IDs are separated by semicolons, and UTF-8 BOM supports spreadsheet readers. A header-only file means no selected candidates; check `candidate-summary.json` and verification before interpreting it.
 
 Supporting files: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, and `SYSTEM2-REVIEW.ko.md`. Verification binds actual responses to every planned task. A choice probability is not a scientific truth probability.
+
+Meta-analysis ranking uses a default paper-count weight of 0.25. Configure `ranking.paper_count_weight` (0–1) in a new profile; see `docs/candidate-csv.md` for the formula, dependency/eligibility rules and CSV fields. This changes post-inspection ordering only.
