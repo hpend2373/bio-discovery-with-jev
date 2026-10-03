@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .facts import record_facts
+from .clinical import enabled
 from .plan import FOCI, OPERATORS
 from .ranking import evidence_counts, ranking_policy, score_candidate
 from .store import connect, counts
@@ -53,6 +54,9 @@ def write_candidate_csv(candidates, path, inspection_status, verification_status
 
 def export_report(out):
     out = Path(out)
+    if enabled(json.loads((out / "profile.json").read_text())):
+        from .clinical_report import export_clinical
+        return export_clinical(out)
     records = json.loads((out / "records.json").read_text())
     by_id = {r["id"]: r for r in records}
     facts = {r["id"]: record_facts(r) for r in records}

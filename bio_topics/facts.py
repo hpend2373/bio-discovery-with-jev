@@ -13,6 +13,10 @@ DIFFERENCES = {"MD", "SMD"}
 def record_facts(record):
     f = record["fields"]
     issues = list(record["parse_issues"])
+    if "clinical" in record:
+        issues.extend({"field": f, "issue": "ledger_conflict"} for f in record["clinical"]["conflicts"])
+        issues.extend({"field": f, "issue": "missing_clinical_question_attribute"}
+                      for f in record["clinical"]["missing_question_fields"])
     result = {"record_id": record["id"], "issues": issues, "effect": None}
     for key in ("fdr", "p_value"):
         if f.get(key) is not None and not 0 <= f[key] <= 1:
@@ -105,7 +109,7 @@ def summarize(records, facts):
         result["limits"] = ["DEG summary only; no subject-level association, flux, or causal transfer established."]
     else:
         result["dependency_components"] = len(dependency_components(records))
-        result["measures"] = sorted({f.get("measure", "unknown") for f in fields})
+        result["measures"] = sorted({f.get("measure") or "unknown" for f in fields})
         result["limits"] = ["Declared cohort links are not proof of independence between other studies.",
                             "No effect-measure conversions, meta-regression, or funnel-asymmetry tests in v0.1."]
     return result
@@ -143,6 +147,8 @@ def synthesize(selected, facts, method, level):
 def compatible_for_synthesis(record, facts, config):
     f = record["fields"]
     reasons = []
+    if "clinical" in record and record["clinical"]["role"] != "effect":
+        reasons.append("not_effect_evidence")
     if f.get("synthesis_approved") is not True:
         reasons.append("synthesis_not_approved")
     if f.get("source_blocked") is True or f.get("hold_reason"):
@@ -162,7 +168,14 @@ def multiverse(records, facts, config):
     eligible = [r for r in records if not compatible_for_synthesis(r, facts, config)]
     if not eligible:
         return
-    components = dependency_components(eligible)
+    if eligible and "clinical" in eligible[0]:
+        from .clinical import population_node
+        grouped = defaultdict(list)
+        for record in eligible:
+            grouped[config.get("population_components", {}).get(record["id"], population_node(record)[0])].append(record)
+        components = list(grouped.values())
+    else:
+        components = dependency_components(eligible)
     for selected_tuple in itertools.product(*components):
         selected = list(selected_tuple)
         for method in config["methods"]:

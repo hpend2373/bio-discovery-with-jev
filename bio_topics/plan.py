@@ -4,6 +4,7 @@ from collections import Counter
 
 from .facts import compatible_for_synthesis, group_records, multiverse, record_facts, summarize
 from .util import digest
+from .clinical import enabled, clinical_counts, axes
 
 OPERATORS = {
     "integrity": ("원문·데이터 무결성", "Identify a concrete source, extraction, numerical, or metadata conflict to investigate."),
@@ -58,6 +59,13 @@ def unit(kind, scope, records, fact, profile):
              "unit_kind": kind, "scope": scope, "observations": fact,
              "limits": ["Hypothesis discovery, not proof of a biological or clinical effect.",
                         "Unknown metadata stay unknown; source approval is not supplied by model confidence."]}
+    if enabled(profile):
+        state["clinical_evidence"] = clinical_counts(records, profile)
+        state["limits"].append("Group judgments are question families, not validated distinct hypotheses. Independence requires explicit evidence.")
+        if kind == "cell":
+            # Complete clinical facts for each row, never a counts-only model input.
+            state["evidence_rows"] = [{"id": r["id"], "fields": r["fields"],
+                                      "clinical": r["clinical"], "facts": record_facts(r)} for r in records]
     if kind in ("row", "pair"):
         # Keep all source fields, including unmapped text. No pre-model FDR/top-K filter.
         state["records"] = records
@@ -66,14 +74,21 @@ def unit(kind, scope, records, fact, profile):
     return {"id": uid, "kind": kind, "scope": scope, "record_ids": ids, "state": state}
 
 
+def pair_axes(profile):
+    cfg = profile["inspection"]
+    return ["clinical_question_id"] if cfg["pairs"] == "within_questions" else cfg.get("pair_group_by", [])
+
+
 def enumerate_units(records, profile):
     facts = {r["id"]: record_facts(r) for r in records}
     for record in records:
         yield unit("row", {"source_row": record["source_row"]}, [record], facts[record["id"]], profile)
     cfg = profile["inspection"]
-    cells = group_records(records, cfg["cell_fields"])
+    cell_axes = ["clinical_question_id"] if enabled(profile) else cfg["cell_fields"]
+    cells = group_records(records, cell_axes)
     for key, members in cells:
-        scope = dict(zip(cfg["cell_fields"], key))
+        scope = ({"clinical_question_id": key[0], **members[0]["clinical"]["question_scope"]}
+                 if enabled(profile) else dict(zip(cell_axes, key)))
         yield unit("cell", scope, members, summarize(members, facts), profile)
         if profile.get("synthesis", {}).get("enabled"):
             synth = profile["synthesis"]
@@ -81,13 +96,19 @@ def enumerate_units(records, profile):
             axes = tuple(dict.fromkeys(("measure", "unit", "outcome_family", "outcome_definition", "outcome_time",
                     "exposure_timing", "comparator_type", "treatment_stage", "estimand", "time_zero", "design")
                     + tuple(synth.get("compatibility_fields", []))))
+            if enabled(profile):
+                axes = tuple(dict.fromkeys(axes + ("clinical_analysis_id",)))
+                details = clinical_counts(members, profile)
+                if details["eligible_independent_evidence_count"] is None or details["relation_conflicts"]:
+                    continue
+                synth = {**synth, "population_components": details["population_component_by_record"]}
             for subkey, subgroup in group_records(members, axes):
                 for selected, values, kind in multiverse(subgroup, facts, synth):
                     yield unit(kind, {**scope, **dict(zip(axes, subkey))}, selected, values, profile)
     if cfg["pairs"] != "none":
-        groups = [((), records)] if cfg["pairs"] == "all" else group_records(records, cfg["pair_group_by"])
+        groups = [((), records)] if cfg["pairs"] == "all" else group_records(records, pair_axes(profile))
         for key, members in groups:
-            scope = {"pair_scope": "all"} if cfg["pairs"] == "all" else dict(zip(cfg["pair_group_by"], key))
+            scope = {"pair_scope": "all"} if cfg["pairs"] == "all" else dict(zip(pair_axes(profile), key))
             for left, right in itertools.combinations(members, 2):
                 values = {"left": facts[left["id"]], "right": facts[right["id"]],
                           "same_entity": left["fields"].get("entity_id") == right["fields"].get("entity_id") if profile["domain"] == "deg" else None,
@@ -98,20 +119,25 @@ def enumerate_units(records, profile):
 def preflight(records, profile):
     names = operators(profile)
     cfg = profile["inspection"]
-    groups = [((), records)] if cfg["pairs"] == "all" else group_records(records, cfg.get("pair_group_by", []))
+    groups = [((), records)] if cfg["pairs"] == "all" else group_records(records, pair_axes(profile))
     pairs = 0 if cfg["pairs"] == "none" else sum(len(g) * (len(g) - 1) // 2 for _, g in groups)
-    result = {"rows": len(records), "cells": len(group_records(records, cfg["cell_fields"])),
+    result = {"rows": len(records), "cells": len(group_records(records, ["clinical_question_id"] if enabled(profile) else cfg["cell_fields"])),
               "pairs": pairs, "operators": names, "top_k_filter": False,
               "inspection_limits": "All rows, cells, declared pairs and supported synthesis scenarios; no unbounded free-form combinations.",
               "unsupported_analyses": ["meta-regression", "funnel-asymmetry testing", "prediction intervals",
                                        "diagnostic-accuracy joint synthesis", "raw-subject omics inference"],
-              "synthesis_exclusions": []}
+              "synthesis_exclusions": [], "clinical_question_partitioning": enabled(profile)}
     if profile.get("synthesis", {}).get("enabled"):
         level = profile["synthesis"].get("ci_level")
         if not isinstance(level, (int, float)) or isinstance(level, bool) or not 0 < level < 1:
             raise ValueError("synthesis.ci_level을 0과 1 사이로 선언하세요.")
         for r in records:
             reasons = compatible_for_synthesis(r, {r["id"]: record_facts(r)}, profile["synthesis"])
+            if enabled(profile):
+                members = [x for x in records if x["clinical"]["question_id"] == r["clinical"]["question_id"]]
+                info = clinical_counts(members, profile)
+                if info["eligible_independent_evidence_count"] is None or info["relation_conflicts"]:
+                    reasons.append("clinical_independence_unresolved")
             if reasons:
                 result["synthesis_exclusions"].append({"record_id": r["id"], "reasons": reasons,
                                                        "still_model_inspected": True})

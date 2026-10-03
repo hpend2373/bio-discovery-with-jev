@@ -5,6 +5,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from .clinical import audit, enabled
 from .backend import HTTPBackend, slice_receipt, validate_receipt, validate_response
 from .ingest import read_profile, read_table
 from .plan import batch_questions, enumerate_units, operators, preflight, questions
@@ -25,8 +26,19 @@ def create_plan(input_path, profile_path, out):
         raise ValueError("이전 계획 임시 폴더가 있습니다. 확인 후 다른 출력 이름을 사용하세요.")
     tmp.mkdir(parents=True)
     try:
+        ledger_files = {}
+        for i, source in enumerate(profile.get("clinical", {}).get("ledger_inputs", [])):
+            original = Path(source["path"])
+            target = "ledger_inputs/" + str(i) + original.suffix.lower()
+            (tmp / "ledger_inputs").mkdir(exist_ok=True)
+            shutil.copyfile(original, tmp / target)
+            if file_hash(tmp / target) != source["sha256"]:
+                raise ValueError("Ledger file changed while planning")
+            ledger_files[target] = source["sha256"]
         write_json(tmp / "profile.json", profile)
         write_json(tmp / "records.json", records)
+        if enabled(profile):
+            write_json(tmp / "clinical-audit.json", audit(records, profile))
         frozen_input = "input" + Path(input_path).suffix.lower()
         shutil.copyfile(input_path, tmp / frozen_input)
         write_json(tmp / "mapping.json", mapping)
@@ -61,7 +73,7 @@ def create_plan(input_path, profile_path, out):
         if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"]:
             raise ValueError("검사 목록의 행·셀·관계 수가 독립 계산과 불일치")
         contract = {"schema_version": 1, "input_file": frozen_input, "input_hash": file_hash(tmp / frozen_input),
-                    "profile_hash": digest(profile), "records_hash": digest(records), "code_hash": source_hash(),
+                    "ledger_files": ledger_files, "profile_hash": digest(profile), "records_hash": digest(records), "code_hash": source_hash(),
                     "unit_count": unit_count, "job_count": job_count, "units_by_kind": dict(kind_counts),
                     "unit_chain": unit_chain, "job_chain": job_chain, "operators": names, "preflight": flight}
         set_meta(db, "contract", contract)
@@ -90,6 +102,9 @@ def verify(out):
         errors.append("frozen_profile_or_records_changed")
     if file_hash(out / contract["input_file"]) != contract["input_hash"]:
         errors.append("frozen_input_changed")
+    for name, expected in contract.get("ledger_files", {}).items():
+        if not (out / name).exists() or file_hash(out / name) != expected:
+            errors.append("frozen_ledger_changed:" + name)
     reparsed, _ = read_table(out / contract["input_file"], profile)
     if digest(reparsed) != digest(records):
         errors.append("normalized_records_do_not_match_source")

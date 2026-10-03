@@ -9,6 +9,8 @@ from pathlib import Path
 
 from .util import boolean, digest, number
 from .ranking import ranking_policy
+from .clinical import prepare, validate_config, enabled
+from .ledger import expand_ledger_files
 
 NUMERIC = {"log2fc", "fdr", "p_value", "value", "ci_lower", "ci_upper", "ci_level", "se", "n", "df"}
 BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate"}
@@ -31,6 +33,8 @@ def read_profile(path):
         raise ValueError("schema_version: 1 및 domain: deg 또는 meta가 필요합니다.")
     if not isinstance(profile.get("columns"), dict):
         raise ValueError("columns 열 매핑이 필요합니다.")
+    expand_ledger_files(profile, path)
+    validate_config(profile)
     ranking_policy(profile)
     transforms = profile.get("transforms", {})
     if not isinstance(transforms, dict) or any(k != "ci_level" or v != "percent_to_fraction" for k, v in transforms.items()):
@@ -38,10 +42,12 @@ def read_profile(path):
     if not isinstance(profile.get("question"), str) or not profile["question"].strip():
         raise ValueError("프로젝트 연구 질문(question)이 필요합니다.")
     contract = profile.get("inspection", {})
-    if contract.get("pairs") not in ("all", "within_groups", "none"):
-        raise ValueError("inspection.pairs를 all / within_groups / none 중 하나로 선언하세요.")
+    if contract.get("pairs") not in ("all", "within_groups", "within_questions", "none"):
+        raise ValueError("inspection.pairs를 all / within_groups / within_questions / none 중 하나로 선언하세요.")
     if contract["pairs"] == "within_groups" and not contract.get("pair_group_by"):
         raise ValueError("within_groups에는 pair_group_by가 필요합니다.")
+    if contract["pairs"] == "within_questions" and not (profile["domain"] == "meta" and profile.get("clinical", {}).get("enabled", True)):
+        raise ValueError("within_questions requires clinical meta mode")
     if not contract.get("cell_fields"):
         raise ValueError("inspection.cell_fields를 선언하세요.")
     synthesis = profile.get("synthesis", {})
@@ -132,7 +138,7 @@ def read_table(path, profile):
         raise ValueError(f"매핑한 원본 열이 없습니다: {missing_columns}")
     if not raw_rows:
         raise ValueError("입력 행이 없습니다. 빈 데이터로 전수 완료를 만들지 않습니다.")
-    required = {"entity_id", "comparison"} if profile["domain"] == "deg" else {"study_id", "measure", "value"}
+    required = {"entity_id", "comparison"} if profile["domain"] == "deg" else ({"measure", "value"} if enabled(profile) else {"study_id", "measure", "value"})
     if required - profile["columns"].keys():
         raise ValueError(f"필수 열 매핑 누락: {sorted(required - profile['columns'].keys())}")
     records = []
@@ -166,6 +172,7 @@ def read_table(path, profile):
         rid = "R" + digest([offset, sheet, raw])[:20]
         records.append({"id": rid, "domain": profile["domain"], "source_row": offset,
                         "sheet": sheet, "fields": fields, "raw": raw, "parse_issues": parse_issues})
+    records = prepare(records, profile)
     return records, {"headers": headers, "mapped_columns": profile["columns"],
                      "unmapped_columns": sorted(set(headers) - set(profile["columns"].values())),
                      "source_sheet": sheet, "rows": len(records),

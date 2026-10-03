@@ -2,15 +2,24 @@
 import math
 
 from .facts import dependency_components
+from .clinical import enabled
 
 
 def ranking_policy(profile):
     settings = profile.get("ranking", {})
-    if not isinstance(settings, dict) or set(settings) - {"paper_count_weight"}:
-        raise ValueError("ranking에는 paper_count_weight만 설정할 수 있습니다.")
+    if not isinstance(settings, dict) or set(settings) - {"paper_count_weight", "independent_evidence_weight"}:
+        raise ValueError("Unknown ranking setting")
     weight = settings.get("paper_count_weight", 0.25)
     if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(weight) or not 0 <= weight <= 1:
         raise ValueError("ranking.paper_count_weight는 0~1의 유한한 수여야 합니다.")
+    independent_weight = settings.get("independent_evidence_weight", 0.5)
+    if isinstance(independent_weight, bool) or not isinstance(independent_weight, (int, float)) or not math.isfinite(independent_weight) or not 0 <= independent_weight <= 1:
+        raise ValueError("independent_evidence_weight must be finite and between 0 and 1")
+    if enabled(profile):
+        return {"paper_count_weight": weight, "independent_evidence_weight": independent_weight,
+                "formula": "paper_weight * log2(1 + eligible_paper_count) + independent_weight * log2(1 + confirmed_independent_count)",
+                "ordering": "within_route_operator: question_completeness, testability, eligibility, evidence_score, candidate_id",
+                "unresolved_independence_bonus": 0, "scientific_truth_probability": False}
     return {"paper_count_weight": weight, "formula": "model_selection_probability + weight * log2(1 + incentive_evidence_count)",
             "ordering": "score_within_route_operator_then_round_robin",
             "count_basis": "publication_id_with_study_id_proxy; shared_publication_study_or_cohort_grouped",
@@ -59,3 +68,12 @@ def score_candidate(probability, evidence, domain, policy):
     bonus = policy["paper_count_weight"] * math.log2(1 + evidence["incentive_evidence_count"]) if domain == "meta" else 0.0
     return {**evidence, "paper_count_bonus": bonus, "ranking_score": probability + bonus,
             "ranking_paper_count_weight": policy["paper_count_weight"] if domain == "meta" else 0.0}
+
+
+def score_clinical(evidence, policy):
+    paper_bonus = policy["paper_count_weight"] * math.log2(1 + evidence["eligible_paper_count"])
+    independent_bonus = policy["independent_evidence_weight"] * math.log2(1 + (evidence["eligible_independent_evidence_count"] or 0))
+    return {**evidence, "paper_count_bonus": paper_bonus, "independent_evidence_bonus": independent_bonus,
+            "ranking_score": paper_bonus + independent_bonus,
+            "ranking_paper_count_weight": policy["paper_count_weight"],
+            "ranking_independent_evidence_weight": policy["independent_evidence_weight"]}
