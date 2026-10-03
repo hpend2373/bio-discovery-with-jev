@@ -15,7 +15,7 @@ from test_clinical import profile, record, rel
 from test_engine import TestBackend
 
 REVIEWED = {"source_verification_status": "full_text_verified", "source_verification_reference": "synthetic paper",
-            "dual_review_status": "agreed", "reviewer_ids": ["reviewer_A", "reviewer_B"], "dual_review_reference": "review register",
+            "dual_review_status": "agreed", "dual_review_independent": True, "reviewer_ids": ["reviewer_A", "reviewer_B"], "dual_review_reference": "review register",
             "rob_status": "assessed", "rob_judgment": "low", "rob_tool": "specified_tool", "rob_source_reference": "outcome review",
             "rob_outcome_definition": "all_cause_mortality"}
 
@@ -131,6 +131,9 @@ class AnalysisSetTests(unittest.TestCase):
         reviewed = record(1, **REVIEWED)
         ready = next(enumerate_analysis_sets(prepare([reviewed], p), p))
         self.assertTrue(ready["synthesis_ready"])
+        reviewed["fields"]["dual_review_independent"] = None
+        self.assertFalse(review_states(reviewed)["dual_review_completed"])
+        reviewed["fields"]["dual_review_independent"] = True
         reviewed["fields"]["rob_outcome_definition"] = "different_outcome"
         self.assertFalse(review_states(reviewed)["outcome_rob_assessed"])
         reviewed["fields"]["reviewer_ids"] = ["same", "same"]

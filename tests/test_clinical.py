@@ -146,7 +146,7 @@ class ClinicalTests(unittest.TestCase):
         p["synthesis"] = {"enabled": True, "policy": "one_per_dependency_component", "methods": ["fixed_iv"],
                           "ci_level": 0.95, "required_fields": ["population_id", "measure"]}
         reviewed = {"source_verification_status": "full_text_verified", "source_verification_reference": "paper",
-                    "dual_review_status": "agreed", "reviewer_ids": ["A", "B"], "dual_review_reference": "review_log",
+                    "dual_review_status": "agreed", "dual_review_independent": True, "reviewer_ids": ["A", "B"], "dual_review_reference": "review_log",
                     "rob_status": "assessed", "rob_judgment": "low", "rob_tool": "declared_tool",
                     "rob_source_reference": "rob_log", "rob_outcome_definition": "all_cause_mortality"}
         rows = prepare([record(1, **reviewed), record(2, **reviewed)], p)
