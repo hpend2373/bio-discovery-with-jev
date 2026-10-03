@@ -70,7 +70,7 @@ def create_plan(input_path, profile_path, out):
                 db.commit()
                 print(canonical({"stage": "planning", "units": unit_count, "jobs": job_count}), flush=True)
         db.commit()
-        if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"]:
+        if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"] or kind_counts["analysis_set"] != flight.get("analysis_sets", 0):
             raise ValueError("검사 목록의 행·셀·관계 수가 독립 계산과 불일치")
         contract = {"schema_version": 1, "input_file": frozen_input, "input_hash": file_hash(tmp / frozen_input),
                     "ledger_files": ledger_files, "profile_hash": digest(profile), "records_hash": digest(records), "code_hash": source_hash(),
@@ -145,7 +145,7 @@ def verify(out):
                 except (ValueError, KeyError, TypeError):
                     errors.append("invalid_receipt:" + jid)
     flight = preflight(records, profile)
-    if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"]:
+    if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"] or kind_counts["analysis_set"] != flight.get("analysis_sets", 0):
         errors.append("independent_coverage_counts_mismatch")
     saved_units = db.execute("SELECT count(*) FROM units").fetchone()[0]
     saved_jobs = db.execute("SELECT count(*) FROM jobs").fetchone()[0]

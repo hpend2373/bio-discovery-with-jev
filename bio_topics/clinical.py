@@ -9,6 +9,7 @@ import math
 import unicodedata
 
 from .util import canonical, digest
+from .clinical_policy import partition, validate_policy, relation_accepted, question_origin, EVIDENCE_LEVELS
 
 QUESTION_FIELDS = ("population", "treatment_stage", "exposure_class", "exposure_definition",
                    "exposure_timing", "comparator_type", "comparator_definition",
@@ -43,7 +44,7 @@ def enabled(profile):
 
 def validate_config(profile):
     cfg = profile.get("clinical", {})
-    allowed = {"enabled", "ledger", "normalization", "question_fields", "analysis_fields", "cohort_relations", "ledger_inputs"}
+    allowed = {"enabled", "ledger", "normalization", "question_fields", "analysis_fields", "cohort_relations", "ledger_inputs", "partition", "independence_policy", "analysis_sets", "question_registry"}
     if not isinstance(cfg, dict) or set(cfg) - allowed:
         raise ValueError("Unknown clinical configuration key")
     if "enabled" in cfg and not isinstance(cfg["enabled"], bool):
@@ -52,6 +53,7 @@ def validate_config(profile):
         if name in cfg and (not isinstance(cfg[name], list) or any(not isinstance(v, str) or not v for v in cfg[name])
                             or len(set(cfg[name])) != len(cfg[name])):
             raise ValueError(name + " must be a unique list of additional fields")
+    validate_policy(profile)
     ledger = cfg.get("ledger", {})
     if not isinstance(ledger, dict) or set(ledger) - set(IDENTITIES):
         raise ValueError("Unknown ledger entity type")
@@ -101,22 +103,25 @@ def validate_config(profile):
     if not isinstance(rels, list):
         raise ValueError("cohort_relations must be a list")
     for rel in rels:
-        if (not isinstance(rel, dict) or set(rel) - {"left", "right", "relation", "confirmed", "source_reference", "question_scope"}
+        if (not isinstance(rel, dict) or set(rel) - {"left", "right", "relation", "confirmed", "source_reference", "question_scope", "evidence_level", "rationale"}
                 or rel.get("relation") not in RELATIONS or not isinstance(rel.get("confirmed"), bool)
                 or not rel.get("source_reference") or not isinstance(rel.get("question_scope", {}), dict)):
             raise ValueError("Invalid cohort relation")
+        if rel.get("evidence_level", "unspecified") not in EVIDENCE_LEVELS:
+            raise ValueError("Unknown independence evidence level")
+        if rel.get("evidence_level", "unspecified") != "unspecified" and not rel.get("rationale"):
+            raise ValueError("Independence evidence requires a rationale")
         for end in ("left", "right"):
             if not isinstance(rel.get(end), str) or not rel[end].startswith(("population:", "cohort:")) or not known(rel[end].split(":", 1)[1]):
                 raise ValueError("Relation endpoints require population:ID or cohort:ID")
 
 
 def axes(profile, kind):
-    base = QUESTION_FIELDS + ("population_subgroup", "exposure_start", "exposure_updating") if kind == "question" else ANALYSIS_FIELDS
-    return tuple(dict.fromkeys(base + tuple(profile.get("clinical", {}).get(kind + "_fields", []))))
-
-
-def required_axes():
-    return QUESTION_FIELDS
+    parts = partition(profile)
+    if kind in parts:
+        return tuple(parts[kind])
+    return tuple(dict.fromkeys(tuple(parts["stratum"]) + tuple(parts["sensitivity"]) + ANALYSIS_FIELDS
+                               + QUESTION_FIELDS + ("population_subgroup", "exposure_start", "exposure_updating")))
 
 
 def normalized_value(value, field, cfg):
@@ -173,26 +178,33 @@ def prepare(records, profile):
                     if rule["confirmed"]:
                         f[field] = rule["canonical"]
                         break
-        missing = [k for k in tuple(dict.fromkeys(required_axes() + tuple(cfg.get("question_fields", [])))) if not known(f.get(k))]
-        scope = {k: f.get(k) if known(f.get(k)) else None for k in axes(profile, "question")}
-        # Missing required meanings never establish equivalence across different rows.
-        discriminator = record["id"] if missing or conflicts else None
-        qid = "Q" + digest([scope, discriminator])[:24]
+        parts = partition(profile)
+        missing = [k for k in parts["question"] if not known(f.get(k))]
+        scope = {k: f.get(k) if known(f.get(k)) else None for k in parts["question"]}
+        question_conflicts = set(conflicts) & set(parts["question"])
+        qid = "Q" + digest([scope, record["id"] if missing or question_conflicts else None])[:24]
+        stratum_scope = {k: f.get(k) if known(f.get(k)) else None for k in parts["stratum"]}
+        stratum_missing = [k for k in parts["stratum"] if not known(f.get(k))]
+        # Missing lower-tier details cannot split the upper question; they remain unresolved for synthesis.
+        sid = "S" + digest([qid, stratum_scope])[:24]
+        sensitivity_scope = {k: f.get(k) if known(f.get(k)) else None for k in parts["sensitivity"]}
         analysis_scope = {k: f.get(k) if known(f.get(k)) else None for k in axes(profile, "analysis")}
-        aid = "A" + digest([qid, analysis_scope])[:24]
+        aid = "A" + digest([qid, sid, analysis_scope])[:24]
         role = f.get("analysis_role")
         if role not in ("effect", "context"):
             role = "effect" if f.get("measure") in {"OR", "RR", "HR", "IRR", "MD", "SMD"} else "unresolved"
-        f.update(clinical_question_id=qid, clinical_analysis_id=aid)
+        f.update(clinical_question_id=qid, clinical_stratum_id=sid, clinical_analysis_id=aid)
         record["clinical"] = {"question_id": qid, "question_scope": scope, "analysis_id": aid,
-                              "analysis_scope": analysis_scope, "role": role, "missing_question_fields": missing,
+                              "analysis_scope": analysis_scope, "stratum_id": sid, "stratum_scope": stratum_scope,
+                              "sensitivity_scope": sensitivity_scope, "missing_stratum_fields": stratum_missing,
+                              "question_origin": question_origin(scope, profile), "role": role, "missing_question_fields": missing,
                               "conflicts": sorted(conflicts), "links": links, "proposals": proposals,
                               "provenance": provenance, "normalization": normalization}
     return result
 
 
 def audit(records, profile):
-    return {"version": 1, "rows": len(records), "questions": len({r["clinical"]["question_id"] for r in records}),
+    return {"version": 2, "partition_policy": partition(profile), "rows": len(records), "questions": len({r["clinical"]["question_id"] for r in records}),
             "unresolved_rows": sum(bool(r["clinical"]["missing_question_fields"] or r["clinical"]["conflicts"]) for r in records),
             "relation_declarations": profile.get("clinical", {}).get("cohort_relations", []),
             "records": [{"record_id": r["id"], **r["clinical"]} for r in records]}
@@ -242,18 +254,18 @@ def clinical_counts(records, profile):
                 and not r["clinical"]["conflicts"] and not r["clinical"]["missing_question_fields"]]
     nodes = {population_node(r)[0] for r in effect_records}
     relations = []
-    scopes = [r["clinical"]["question_scope"] for r in records]
+    scopes = [r["fields"] for r in records]
     for rel in profile.get("clinical", {}).get("cohort_relations", []):
         if not all(all(scope.get(k) == v for k, v in rel.get("question_scope", {}).items()) for scope in scopes):
             continue
-        relations.append(rel)
+        relations.append({**rel, "accepted_for_independence": relation_accepted(rel, profile)})
     # Keep identity/overlap bridges outside this candidate, but do not import unrelated conflicts.
     reachable = set(nodes)
     changed = True
     while changed:
         before = len(reachable)
         for rel in relations:
-            if rel["confirmed"] and rel["relation"] in {"same", "partial_overlap", "contains"} and {rel["left"], rel["right"]} & reachable:
+            if relation_accepted(rel, profile) and rel["relation"] in {"same", "partial_overlap", "contains"} and {rel["left"], rel["right"]} & reachable:
                 reachable.update((rel["left"], rel["right"]))
         changed = len(reachable) != before
     relations = [r for r in relations if {r["left"], r["right"]} <= reachable]
@@ -261,15 +273,15 @@ def clinical_counts(records, profile):
     identity = Components(graph_nodes)
     dependencies = Components(graph_nodes)
     for rel in relations:
-        if rel["confirmed"] and rel["relation"] == "same":
+        if relation_accepted(rel, profile) and rel["relation"] == "same":
             identity.join(rel["left"], rel["right"])
     for rel in relations:
-        if rel["confirmed"] and rel["relation"] in {"same", "partial_overlap", "contains"}:
+        if relation_accepted(rel, profile) and rel["relation"] in {"same", "partial_overlap", "contains"}:
             dependencies.join(rel["left"], rel["right"])
     matrix = defaultdict(set)
     conflicts = []
     for rel in relations:
-        if not rel["confirmed"] or rel["relation"] == "unknown":
+        if not relation_accepted(rel, profile) or rel["relation"] == "unknown":
             continue
         a, b = identity.root(rel["left"]), identity.root(rel["right"])
         key = tuple(sorted((a, b)))
@@ -279,12 +291,15 @@ def clinical_counts(records, profile):
     for key, kinds in matrix.items():
         if "disjoint" in kinds and kinds & {"same", "partial_overlap", "contains"}:
             conflicts.append({"issue": "conflicting_overlap_relations", "nodes": key})
+    unresolved_relations = []
     def assess(selected):
         selected_nodes = {identity.root(population_node(r)[0]) for r in selected}
         unresolved = {identity.root(population_node(r)[0]) for r in selected if not population_node(r)[1]}
         for a, b in combinations(sorted(selected_nodes), 2):
             if matrix.get((a, b)) != {"disjoint"}:
                 unresolved.update((a, b))
+                if {"left": a, "right": b, "status": "not_established"} not in unresolved_relations:
+                    unresolved_relations.append({"left": a, "right": b, "status": "not_established"})
         if conflicts:
             unresolved.update(selected_nodes)
         return (None if unresolved else len(selected_nodes)), unresolved, selected_nodes
@@ -300,6 +315,9 @@ def clinical_counts(records, profile):
             "eligible_independent_evidence_count": eligible_independent,
             "unresolved_independence_count": len(unknown_nodes), "eligible_paper_count": len(eligible_papers),
             "eligible_evidence_count": len(eligible_nodes), "eligible_record_count": len(eligible),
-            "relation_conflicts": conflicts, "cohort_relations": relations,
+            "relation_conflicts": conflicts, "cohort_relations": relations, "unresolved_relations": unresolved_relations,
+            "count_scope": "provided_record_set_only",
             "incentive_evidence_count": eligible_independent or 0,
-            "population_component_by_record": {r["id"]: identity.root(population_node(r)[0]) for r in effect_records}}
+            "population_component_by_record": {r["id"]: identity.root(population_node(r)[0]) for r in effect_records},
+            "dependency_component_by_record": {r["id"]: dependencies.root(population_node(r)[0]) for r in effect_records},
+            "identity_roots": {node: identity.root(node) for node in graph_nodes}}

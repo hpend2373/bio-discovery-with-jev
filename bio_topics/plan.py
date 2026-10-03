@@ -4,7 +4,9 @@ from collections import Counter
 
 from .facts import compatible_for_synthesis, group_records, multiverse, record_facts, summarize
 from .util import digest
-from .clinical import enabled, clinical_counts, axes
+from .clinical import enabled, clinical_counts
+from .analysis_sets import enumerate_analysis_sets
+from .clinical_policy import partition
 
 OPERATORS = {
     "integrity": ("원문·데이터 무결성", "Identify a concrete source, extraction, numerical, or metadata conflict to investigate."),
@@ -66,7 +68,7 @@ def unit(kind, scope, records, fact, profile):
             # Complete clinical facts for each row, never a counts-only model input.
             state["evidence_rows"] = [{"id": r["id"], "fields": r["fields"],
                                       "clinical": r["clinical"], "facts": record_facts(r)} for r in records]
-    if kind in ("row", "pair"):
+    if kind in ("row", "pair", "analysis_set"):
         # Keep all source fields, including unmapped text. No pre-model FDR/top-K filter.
         state["records"] = records
     if profile.get("knowledge_relations"):
@@ -90,21 +92,28 @@ def enumerate_units(records, profile):
         scope = ({"clinical_question_id": key[0], **members[0]["clinical"]["question_scope"]}
                  if enabled(profile) else dict(zip(cell_axes, key)))
         yield unit("cell", scope, members, summarize(members, facts), profile)
-        if profile.get("synthesis", {}).get("enabled"):
+        if profile.get("synthesis", {}).get("enabled") and not enabled(profile):
             synth = profile["synthesis"]
             # Additional compatibility axes cannot be removed by a user cell definition.
             axes = tuple(dict.fromkeys(("measure", "unit", "outcome_family", "outcome_definition", "outcome_time",
                     "exposure_timing", "comparator_type", "treatment_stage", "estimand", "time_zero", "design")
                     + tuple(synth.get("compatibility_fields", []))))
-            if enabled(profile):
-                axes = tuple(dict.fromkeys(axes + ("clinical_analysis_id",)))
-                details = clinical_counts(members, profile)
-                if details["eligible_independent_evidence_count"] is None or details["relation_conflicts"]:
-                    continue
-                synth = {**synth, "population_components": details["population_component_by_record"]}
             for subkey, subgroup in group_records(members, axes):
                 for selected, values, kind in multiverse(subgroup, facts, synth):
                     yield unit(kind, {**scope, **dict(zip(axes, subkey))}, selected, values, profile)
+    if enabled(profile):
+        by_id = {r["id"]: r for r in records}
+        for scenario in enumerate_analysis_sets(records, profile):
+            available = [by_id[rid] for rid in scenario["available_record_ids"]]
+            scope = {"clinical_question_id": scenario["question_id"], "stratum_id": scenario["stratum_id"],
+                     "analysis_set_id": scenario["id"]}
+            yield unit("analysis_set", scope, available, scenario, profile)
+            if profile.get("synthesis", {}).get("enabled") and scenario["synthesis_ready"]:
+                selected = [by_id[rid] for rid in scenario["selected_record_ids"]]
+                info = clinical_counts(selected, profile)
+                synth = {**profile["synthesis"], "population_components": info["population_component_by_record"]}
+                for chosen, values, kind in multiverse(selected, facts, synth):
+                    yield unit(kind, scope, chosen, values, profile)
     if cfg["pairs"] != "none":
         groups = [((), records)] if cfg["pairs"] == "all" else group_records(records, pair_axes(profile))
         for key, members in groups:
@@ -127,17 +136,19 @@ def preflight(records, profile):
               "unsupported_analyses": ["meta-regression", "funnel-asymmetry testing", "prediction intervals",
                                        "diagnostic-accuracy joint synthesis", "raw-subject omics inference"],
               "synthesis_exclusions": [], "clinical_question_partitioning": enabled(profile)}
+    if enabled(profile):
+        scenarios = list(enumerate_analysis_sets(records, profile))
+        result["analysis_sets"] = len(scenarios)
+        result["analysis_sets_ready_for_synthesis"] = sum(s["synthesis_ready"] for s in scenarios)
+        result["partition_policy"] = partition(profile)
+        result["synthesis_exclusions"] = [{"analysis_set_id": s["id"], "reasons": s["synthesis_blockers"],
+                                           "still_model_inspected": True} for s in scenarios if not s["synthesis_ready"]]
     if profile.get("synthesis", {}).get("enabled"):
         level = profile["synthesis"].get("ci_level")
         if not isinstance(level, (int, float)) or isinstance(level, bool) or not 0 < level < 1:
             raise ValueError("synthesis.ci_level을 0과 1 사이로 선언하세요.")
-        for r in records:
+        for r in ([] if enabled(profile) else records):
             reasons = compatible_for_synthesis(r, {r["id"]: record_facts(r)}, profile["synthesis"])
-            if enabled(profile):
-                members = [x for x in records if x["clinical"]["question_id"] == r["clinical"]["question_id"]]
-                info = clinical_counts(members, profile)
-                if info["eligible_independent_evidence_count"] is None or info["relation_conflicts"]:
-                    reasons.append("clinical_independence_unresolved")
             if reasons:
                 result["synthesis_exclusions"].append({"record_id": r["id"], "reasons": reasons,
                                                        "still_model_inspected": True})

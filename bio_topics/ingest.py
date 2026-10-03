@@ -14,7 +14,7 @@ from .ledger import expand_ledger_files
 
 NUMERIC = {"log2fc", "fdr", "p_value", "value", "ci_lower", "ci_upper", "ci_level", "se", "n", "df"}
 BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate"}
-LISTS = {"cohort_ids", "adjustment_variables"}
+LISTS = {"cohort_ids", "adjustment_variables", "reviewer_ids"}
 
 
 def read_profile(path):
