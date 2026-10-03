@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from .util import boolean, digest, number
+from .ranking import ranking_policy
 
 NUMERIC = {"log2fc", "fdr", "p_value", "value", "ci_lower", "ci_upper", "ci_level", "se", "n", "df"}
 BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate"}
@@ -30,6 +31,7 @@ def read_profile(path):
         raise ValueError("schema_version: 1 및 domain: deg 또는 meta가 필요합니다.")
     if not isinstance(profile.get("columns"), dict):
         raise ValueError("columns 열 매핑이 필요합니다.")
+    ranking_policy(profile)
     transforms = profile.get("transforms", {})
     if not isinstance(transforms, dict) or any(k != "ci_level" or v != "percent_to_fraction" for k, v in transforms.items()):
         raise ValueError("지원되는 변환은 transforms.ci_level: percent_to_fraction입니다.")
