@@ -80,7 +80,7 @@ A registry entry describes the underlying question. New hypotheses generated fro
 
 ## Review priority, not synthesis weight or certainty
 
-Within comparable route/operator/precision groups, order is:
+Within each route/operator, independent-evidence priority applies across questions. Precision amounts are compared only within a common analysis axis. The order is:
 
 1. Upper-question completeness and usable analysis sets.
 2. Independent units and comparable precision in the analysis sets.
@@ -99,7 +99,7 @@ All states below come from explicit effect-row evidence, not model probabilities
 | Gate | Required input |
 | --- | --- |
 | Original-source verification | `source_verification_status: full_text_verified` and `source_verification_reference` |
-| Independent dual review recorded | `dual_review_status: agreed`, at least two distinct `reviewer_ids` (semicolon-delimited in CSV), and `dual_review_reference` |
+| Independent dual review recorded | `dual_review_status: agreed`, `dual_review_independent: true`, at least two distinct `reviewer_ids` (semicolon-delimited in CSV), and `dual_review_reference` |
 | Outcome RoB | `rob_status: assessed`, `rob_judgment: low|some_concerns|high`, `rob_tool`, `rob_source_reference`, and matching `rob_outcome_definition` |
 | Synthesis approval | Explicit `synthesis_approved: true` |
 

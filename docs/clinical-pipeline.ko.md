@@ -82,7 +82,7 @@ clinical:
 
 ## 검토 우선순위
 
-같은 경로·연산자·비교 가능한 정밀도 축 안에서 다음 순서를 사용합니다.
+같은 경로·연산자 안에서 독립 근거 우선순위는 질문 전체에 적용하고, 정밀도 수치는 같은 분석 축에서만 비교합니다. 순서는 다음과 같습니다.
 
 1. 질문의 완결성·사용 가능한 분석 세트
 2. 분석 세트별 독립 근거와 비교 가능한 정밀도
@@ -101,7 +101,7 @@ clinical:
 | 상태 | 필요한 입력 |
 | --- | --- |
 | 원문 확인 | source_verification_status=full_text_verified 및 source_verification_reference |
-| 독립 이중검토 기록 | dual_review_status=agreed, 서로 다른 reviewer_ids 2개 이상, dual_review_reference |
+| 독립 이중검토 기록 | dual_review_status=agreed, dual_review_independent=true, 서로 다른 reviewer_ids 2개 이상, dual_review_reference |
 | 결과별 RoB | rob_status=assessed, rob_judgment=low/some_concerns/high, 도구·출처, 해당 결과와 일치하는 rob_outcome_definition |
 | 합성 승인 | synthesis_approved=true |
 
