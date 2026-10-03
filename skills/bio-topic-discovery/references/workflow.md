@@ -28,3 +28,7 @@ Primary deliverable: `candidates.csv`. It retains every candidate with source li
 Supporting files: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, and `SYSTEM2-REVIEW.ko.md`. Verification binds actual responses to every planned task. A choice probability is not a scientific truth probability.
 
 Meta-analysis ranking uses a default paper-count weight of 0.25. Configure `ranking.paper_count_weight` (0–1) in a new profile; see `docs/candidate-csv.md` for the formula, dependency/eligibility rules and CSV fields. This changes post-inspection ordering only.
+
+## v0.2 clinical mode
+
+Use `profiles/meta.clinical.example.yaml` for meta-analysis. Clinical cells use question boundaries; `pairs: within_questions` inspects all within-question pairs. Link scoped CSV/Excel ledgers with `clinical.ledger_files`; freeze their copies, hashes and normalization history. Candidate CSV ID lists use JSON; `inspection_results.csv` contains all jobs. Publication and independent counts are separate, with blank unresolved independence. Publication and independent weights default to 0.25 and 0.5. Read the engine documentation `docs/clinical-pipeline.md` for the full configuration. The legacy scoring/semicolon schema above applies only to `clinical.enabled: false`.

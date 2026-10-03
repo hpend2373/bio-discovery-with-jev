@@ -28,3 +28,7 @@ python3 scripts/run.py status --out /absolute/new-run
 보조 자료: `REPORT.ko.md`, `candidates.jsonl`, `decisions.jsonl`, `verification.json`, `SYSTEM2-REVIEW.ko.md`. 실제 응답이 모든 계획된 과제에 결합되었는지 verify가 검사합니다. 선택 확률은 과학적 진실 확률이 아닙니다.
 
 메타분석의 기본 논문 수 가중치는 0.25입니다. 새 프로파일의 `ranking.paper_count_weight`(0~1)로 조정합니다. 수식·중복·상태 기준과 CSV 열은 `docs/candidate-csv.ko.md`를 참고하세요. 모델 검사 후 후보 순서에만 적용합니다.
+
+## v0.2 임상 질문 방식
+
+메타분석은 `profiles/meta.clinical.example.yaml`을 사용합니다. 기본 임상 방식에서는 셀을 임상 질문으로 나누고 `pairs: within_questions`로 같은 질문 안의 모든 쌍을 검사할 수 있습니다. 원장 CSV/Excel은 `clinical.ledger_files`에 범위와 열을 명시해 연결합니다. 원장 복사본·해시·정규화 이력을 고정합니다. 후보 CSV의 ID 목록은 JSON이며, 전체 검사 기록은 `inspection_results.csv`에 있습니다. 논문 수와 독립 근거 수를 분리하며 미확정 독립성은 빈 값입니다. 가중치는 논문 0.25, 독립 근거 0.5입니다. 자세한 설정은 엔진의 `docs/clinical-pipeline.ko.md`를 읽으세요. 위 기존 점수·세미콜론 스키마는 `clinical.enabled: false`의 재현용입니다.
