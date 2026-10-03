@@ -13,7 +13,7 @@ from .clinical import prepare, validate_config, enabled
 from .ledger import expand_ledger_files
 
 NUMERIC = {"log2fc", "fdr", "p_value", "value", "ci_lower", "ci_upper", "ci_level", "se", "n", "df"}
-BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate"}
+BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate", "dual_review_independent"}
 LISTS = {"cohort_ids", "adjustment_variables", "reviewer_ids"}
 
 

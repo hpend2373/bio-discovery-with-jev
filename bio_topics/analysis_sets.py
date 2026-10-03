@@ -17,7 +17,7 @@ def review_states(record):
     f = record["fields"]
     source = f.get("source_verification_status") == "full_text_verified" and bool(f.get("source_verification_reference"))
     reviewers = f.get("reviewer_ids", [])
-    dual = (f.get("dual_review_status") == "agreed" and isinstance(reviewers, list)
+    dual = (f.get("dual_review_status") == "agreed" and f.get("dual_review_independent") is True and isinstance(reviewers, list)
             and len(set(reviewers)) >= 2 and bool(f.get("dual_review_reference")))
     rob = (f.get("rob_status") == "assessed" and f.get("rob_judgment") in {"low", "some_concerns", "high"}
            and bool(f.get("rob_tool")) and bool(f.get("rob_source_reference"))
