@@ -6,6 +6,7 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
+from bio_topics.analysis_sets import enumerate_analysis_sets, scenario_priority
 from bio_topics.clinical import prepare, clinical_counts, validate_config
 from bio_topics.ingest import read_profile, read_table
 from bio_topics.plan import enumerate_units, preflight
@@ -33,7 +34,8 @@ def profile(**clinical):
 
 def rel(left, right, kind="disjoint", **kwargs):
     return {"left": f"population:N{left}", "right": f"population:N{right}", "relation": kind,
-            "confirmed": True, "source_reference": "synthetic participant register", **kwargs}
+            "confirmed": True, "source_reference": "synthetic participant register",
+            "evidence_level": "documented_sampling", "rationale": "Synthetic sampling-register assessment", **kwargs}
 
 
 class ClinicalTests(unittest.TestCase):
@@ -70,11 +72,11 @@ class ClinicalTests(unittest.TestCase):
         p = profile()
         rows = prepare([record(1), record(2, exposure_timing="pre_diagnosis"), record(3, outcome_definition="incidence"),
                         record(4, exposure_definition="drug_Y"), record(5, exposure_timing=None), record(6, exposure_timing=None)], p)
-        self.assertEqual(len({r["clinical"]["question_id"] for r in rows}), 6)
-        self.assertEqual(preflight(rows, p)["pairs"], 0)
+        self.assertEqual(len({r["clinical"]["question_id"] for r in rows}), 5)
+        self.assertEqual(preflight(rows, p)["pairs"], 1)
         units = list(enumerate_units(rows, p))
         self.assertEqual(sum(u["kind"] == "row" for u in units), 6)
-        self.assertEqual(sum(u["kind"] == "cell" for u in units), 6)
+        self.assertEqual(sum(u["kind"] == "cell" for u in units), 5)
 
     def test_analysis_variants_share_question_but_remain_separate(self):
         p = profile()
@@ -103,7 +105,7 @@ class ClinicalTests(unittest.TestCase):
         self.assertEqual(info["missing_paper_identity_rows"], 1)
         self.assertIsNone(info["independent_evidence_count"])
         self.assertEqual(info["unresolved_independence_count"], 2)
-        self.assertEqual(score_clinical(info, ranking_policy(p))["independent_evidence_bonus"], 0)
+        self.assertEqual(score_clinical(scenario_priority(list(enumerate_analysis_sets(rows, p))), ranking_policy(p))["paper_count_bonus"], 0)
         lone = prepare([record(1, population_id=None, study_id="unknown")], p)
         self.assertIsNone(clinical_counts(lone, p)["independent_evidence_count"])
 
@@ -136,14 +138,18 @@ class ClinicalTests(unittest.TestCase):
         info = clinical_counts(rows, p)
         self.assertEqual(info["paper_count"], 2)
         self.assertEqual(info["eligible_paper_count"], 0)
-        self.assertEqual(score_clinical(info, ranking_policy(p))["ranking_score"], 0)
+        self.assertEqual(score_clinical(scenario_priority(list(enumerate_analysis_sets(rows, p))), ranking_policy(p))["ranking_score"], 0)
         self.assertEqual(sum(u["kind"] == "row" for u in enumerate_units(rows, p)), 2)
 
     def test_synthesis_never_duplicates_same_population_and_blocks_unknown_overlap(self):
         p = profile(cohort_relations=[rel(1, 2, "same")])
         p["synthesis"] = {"enabled": True, "policy": "one_per_dependency_component", "methods": ["fixed_iv"],
                           "ci_level": 0.95, "required_fields": ["population_id", "measure"]}
-        rows = prepare([record(1), record(2)], p)
+        reviewed = {"source_verification_status": "full_text_verified", "source_verification_reference": "paper",
+                    "dual_review_status": "agreed", "reviewer_ids": ["A", "B"], "dual_review_reference": "review_log",
+                    "rob_status": "assessed", "rob_judgment": "low", "rob_tool": "declared_tool",
+                    "rob_source_reference": "rob_log", "rob_outcome_definition": "all_cause_mortality"}
+        rows = prepare([record(1, **reviewed), record(2, **reviewed)], p)
         pooled = [u for u in enumerate_units(rows, p) if u["kind"] == "multiverse"]
         self.assertEqual(len(pooled), 2)
         self.assertTrue(all(u["state"]["observations"]["k_dependency_components"] == 1 for u in pooled))
@@ -166,11 +172,11 @@ class ClinicalTests(unittest.TestCase):
             result = run(out, backend=TestBackend())
             candidates = list(csv.DictReader(io.StringIO((out / "candidates.csv").read_text(encoding="utf-8-sig"))))
             inspections = list(csv.DictReader(io.StringIO((out / "inspection_results.csv").read_text(encoding="utf-8-sig"))))
-            self.assertEqual(len(inspections), 8)
+            self.assertEqual(len(inspections), 10)
             self.assertEqual(len(candidates), 2)
             self.assertEqual(result["candidates"], 2)
             self.assertEqual({int(c["paper_count"]) for c in candidates}, {2})
-            self.assertEqual({int(c["independent_evidence_count"]) for c in candidates}, {2})
+            self.assertEqual({s["independent_evidence_count"] for c in candidates for s in json.loads(c["analysis_set_counts"])}, {2})
             mapped = {j for c in candidates for j in json.loads(c["inspection_ids"])}
             self.assertEqual(mapped, {i["job_id"] for i in inspections})
             self.assertTrue(all(json.loads(i["candidate_ids"]) for i in inspections))
@@ -180,7 +186,7 @@ class ClinicalTests(unittest.TestCase):
             create_plan(data, cfg, out2)
             run(out2, backend=TestBackend(fail_at=2))
             failed = list(csv.DictReader(io.StringIO((out2 / "inspection_results.csv").read_text(encoding="utf-8-sig"))))
-            self.assertEqual(len(failed), 8)
+            self.assertEqual(len(failed), 10)
             self.assertEqual(sum(i["status"] == "failed" for i in failed), 2)
             self.assertTrue(all(not json.loads(i["candidate_ids"]) for i in failed if i["status"] == "failed"))
 
