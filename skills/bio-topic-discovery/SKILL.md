@@ -32,3 +32,7 @@ Meta-regression, funnel tests, joint diagnostic-accuracy synthesis, complex cova
 ## Current quality limits
 
 Candidate titles are templates derived from categorical decisions; synthesis warnings can affect routing. Inspection counts and choice probabilities are not numbers of novel topics or scientific validity scores. Distinguish native model labels from questions developed by subsequent reviewers. Literature, novelty, and falsifiability review remain separate. Public computing time and result interpretation are in `docs/evaluation/`.
+
+## Meta-analysis ranking
+
+Use the engine default `ranking.paper_count_weight: 0.25` unless the user specifies another weight (0–1). After exhaustive model inspection, rank within route/operator buckets by model selection probability plus the logarithmic count bonus. Count only cited evidence, group shared paper/study/cohort identities, and exclude held/blocked or unidentified evidence from extra bonus. Map paper IDs when available; report any study-ID proxy. Deliver the counts and scores in CSV. Do not treat a priority score as statistical significance or scientific truth, reduce inspection coverage, or modify frozen runs to change ranking.
