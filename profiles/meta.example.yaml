@@ -47,3 +47,7 @@ backend:
   model: multilingual
   max_len: 4096
   head_max_len: 384
+
+# Legacy arithmetic demonstration. Use meta.clinical.example.yaml for clinical candidates.
+clinical:
+  enabled: false

@@ -1,0 +1,76 @@
+schema_version: 1
+domain: meta
+synthetic_example: true
+question: "Inspect all synthetic effect rows and study comparisons for testable explanations."
+columns:
+  source_effect_id: effect_id
+  study_id: study
+  publication_id: publication
+  population_id: population_id
+  exposure_definition: drug
+  exposure_timing: timing
+  measure: measure
+  value: value
+  se: se
+  source_blocked: blocked
+  hold_reason: hold
+declarations:
+  se_scale: log
+clinical:
+  enabled: true
+  ledger_files:
+    - entity: effects
+      path: ../examples/clinical-effect-ledger.csv
+      id_column: effect_id
+      columns: {analysis_id: analysis_id}
+      confirmed: true
+      source_reference: synthetic_effect_register
+  ledger:
+    analyses:
+      - id: A1
+        confirmed: true
+        source_reference: synthetic_analysis_specification
+        fields:
+          population: adults
+          treatment_stage: first_line
+          exposure_class: class_X
+          comparator_type: nonuse
+          comparator_definition: nonusers
+          outcome_definition: all_cause_mortality
+          outcome_time: 12_months
+          estimand: association
+          time_zero: diagnosis
+          design: cohort
+          model: adjusted
+  normalization:
+    exposure_definition:
+      - canonical: drug_X
+        aliases: [DX]
+        confirmed: true
+        source_reference: synthetic_dictionary
+    exposure_timing:
+      - canonical: post_diagnosis
+        aliases: [after_diagnosis]
+        confirmed: true
+        source_reference: synthetic_dictionary
+  cohort_relations:
+    - left: population:N1
+      right: population:N2
+      relation: disjoint
+      confirmed: true
+      source_reference: synthetic_participant_register
+inspection:
+  cell_fields: [clinical_question_id]
+  pairs: within_questions
+  operators: [integrity, heterogeneity, robustness, bias, gap, generalizability, contradiction, decision]
+synthesis:
+  enabled: false
+ranking:
+  paper_count_weight: 0.25
+  independent_evidence_weight: 0.5
+backend:
+  kind: laya
+  url: http://127.0.0.1:8000
+  model: multilingual
+  max_len: 8192
+  head_max_len: 384

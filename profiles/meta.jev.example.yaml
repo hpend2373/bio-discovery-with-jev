@@ -71,3 +71,7 @@ backend:
   model: jev-1.13.0
   max_body_bytes: 262144
   timeout: 45
+
+# Legacy arithmetic demonstration. Use meta.clinical.example.yaml for clinical candidates.
+clinical:
+  enabled: false
