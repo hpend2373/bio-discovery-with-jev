@@ -29,6 +29,6 @@ python3 scripts/run.py status --out /absolute/new-run
 
 메타분석의 기본 논문 수 가중치는 0.25입니다. 새 프로파일의 `ranking.paper_count_weight`(0~1)로 조정합니다. 수식·중복·상태 기준과 CSV 열은 `docs/candidate-csv.ko.md`를 참고하세요. 모델 검사 후 후보 순서에만 적용합니다.
 
-## v0.2 임상 질문 방식
+## v0.3 임상 질문·분석 세트
 
-메타분석은 `profiles/meta.clinical.example.yaml`을 사용합니다. 기본 임상 방식에서는 셀을 임상 질문으로 나누고 `pairs: within_questions`로 같은 질문 안의 모든 쌍을 검사할 수 있습니다. 원장 CSV/Excel은 `clinical.ledger_files`에 범위와 열을 명시해 연결합니다. 원장 복사본·해시·정규화 이력을 고정합니다. 후보 CSV의 ID 목록은 JSON이며, 전체 검사 기록은 `inspection_results.csv`에 있습니다. 논문 수와 독립 근거 수를 분리하며 미확정 독립성은 빈 값입니다. 가중치는 논문 0.25, 독립 근거 0.5입니다. 자세한 설정은 엔진의 `docs/clinical-pipeline.ko.md`를 읽으세요. 위 기존 점수·세미콜론 스키마는 `clinical.enabled: false`의 재현용입니다.
+메타분석은 `profiles/meta.clinical.example.yaml`과 엔진의 `docs/clinical-pipeline.ko.md`를 읽습니다. 상위 질문·층·민감도는 `clinical.partition`, 선택 규칙은 결과값을 사용하지 않는 `clinical.analysis_sets`, 생성 경위는 `clinical.question_registry`로 선언합니다. 원장은 범위를 지정한 `clinical.ledger_files`로 연결합니다. 분석 세트마다 선택 효과·중복 정책·독립성 수준·미결 관계를 확인하고, 후보–효과 연결표에서 모든 반대·무효 결과가 유지되는지 검증합니다. 단계별 원문·이중검토·결과별 RoB·승인은 전수 검사와 별도입니다. 논문 가점은 기본 0이며 중복 출판에 상한을 적용합니다. 위 구형 스키마·점수 설명은 `clinical.enabled: false` 재현용입니다. 새 임상 CSV의 목록 셀은 JSON입니다.
