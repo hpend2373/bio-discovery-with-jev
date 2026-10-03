@@ -1,7 +1,7 @@
 # Bio Topic Discovery
 
 
-**v0.2 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.
+**v0.3 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.
 **English** | [한국어](README.ko.md)
 
 A research skill for inspecting every declared unit in DEG/omics result tables or meta-analysis ledgers with **local Laya** or the **TypeSafe Jev API**. It preserves evidence links, records model decisions, and verifies inspection coverage before reporting follow-up candidates.
@@ -119,4 +119,4 @@ Contract tests use synthetic fixtures. Scientific validation requires independen
 - [TypeSafe API](https://docs.typesafe.ai/api) and [model versions](https://docs.typesafe.ai/models)
 - [Laya repository](https://github.com/ConvaiInnovations/laya)
 
-v0.2 meta-analysis links ledgers, normalizes confirmed terminology and exports clinical-question families. Publication counts and confirmed independent evidence counts are separate; unresolved independence stays blank. Their default weights are 0.25 and 0.5. Every detailed inspection remains in `inspection_results.csv`. See the [clinical pipeline](docs/clinical-pipeline.md).
+v0.3 meta-analysis links ledgers, normalizes confirmed terminology and exports clinical-question families. Questions have declared upper-question, stratum and sensitivity levels. Independence belongs to selected analysis sets, with blank unresolved counts. Publication credit defaults to zero and is capped for repeated publications. `analysis_sets.csv` records selected effects, overlap and review gates; `candidate_effects.csv` links all same-question effects and roles. Model completion does not certify source checks, dual review, outcome RoB or synthesis approval. See the [clinical pipeline](docs/clinical-pipeline.md).
