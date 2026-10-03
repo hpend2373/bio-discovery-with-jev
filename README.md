@@ -116,3 +116,5 @@ Contract tests use synthetic fixtures. Scientific validation requires independen
 
 - [TypeSafe API](https://docs.typesafe.ai/api) and [model versions](https://docs.typesafe.ai/models)
 - [Laya repository](https://github.com/ConvaiInnovations/laya)
+
+Meta-analysis candidates receive a configurable paper-count incentive after exhaustive inspection. The default weight is `ranking.paper_count_weight: 0.25`; shared papers, studies and declared cohorts are grouped, and blocked/held evidence receives no extra count bonus. See [ranking and CSV fields](docs/candidate-csv.md).
