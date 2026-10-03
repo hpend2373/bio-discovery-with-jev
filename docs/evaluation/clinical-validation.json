@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "automated_tests_passed": 44,
+  "synthetic_native_laya": {
+    "planned_judgments": 32,
+    "evaluated": 32,
+    "cached": 0,
+    "failed": 0,
+    "pending": 0,
+    "coverage": 1.0,
+    "verification": "verified",
+    "candidate_families": 16,
+    "all_selected_inspections_linked": true
+  },
+  "scientific_validity_established": false,
+  "live_jev_tested": false,
+  "notes": [
+    "Synthetic evidence only. No private case details.",
+    "This verifies mechanics and full native response binding, not scientific novelty or hypothesis truth.",
+    "Historical latency results do not measure the v0.2 clinical pipeline."
+  ]
+}
