@@ -1,0 +1,3 @@
+effect_id,study,publication,population_id,drug,timing,measure,value,se,blocked,hold
+E1,S1,P1,N1,DX,after_diagnosis,HR,0.8,0.1,false,
+E2,S2,P2,N2,drug_X,post_diagnosis,HR,1.2,0.1,false,
