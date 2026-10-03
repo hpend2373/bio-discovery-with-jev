@@ -64,6 +64,8 @@ synthesis:
   - fixed_iv
   ci_level: 0.95
   leave_one_component_out: true
+ranking:
+  paper_count_weight: 0.25
 backend:
   kind: jev
   model: jev-1.13.0

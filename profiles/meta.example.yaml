@@ -39,6 +39,8 @@ synthesis:
   methods: [fixed_iv]
   ci_level: 0.95
   leave_one_component_out: true
+ranking:
+  paper_count_weight: 0.25
 backend:
   kind: laya
   url: http://127.0.0.1:8000
