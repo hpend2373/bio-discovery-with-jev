@@ -18,6 +18,10 @@ declarations:
   se_scale: log
 clinical:
   enabled: true
+  partition:
+    question: [exposure_class, exposure_timing, outcome_definition]
+    stratum: [population, treatment_stage]
+    sensitivity: [population_subgroup, exposure_definition, comparator_type, comparator_definition, outcome_time, model, effect_adjusted, adjustment_variables, dose, lag, exposure_duration, exposure_start, exposure_updating]
   ledger_files:
     - entity: effects
       path: ../examples/clinical-effect-ledger.csv
@@ -59,6 +63,8 @@ clinical:
       relation: disjoint
       confirmed: true
       source_reference: synthetic_participant_register
+      evidence_level: documented_sampling
+      rationale: Synthetic register explicitly declares mutually exclusive sampling frames.
 inspection:
   cell_fields: [clinical_question_id]
   pairs: within_questions
@@ -66,8 +72,7 @@ inspection:
 synthesis:
   enabled: false
 ranking:
-  paper_count_weight: 0.25
-  independent_evidence_weight: 0.5
+  paper_count_weight: 0.0
 backend:
   kind: laya
   url: http://127.0.0.1:8000
