@@ -1,5 +1,7 @@
 # Bio Topic Discovery
 
+
+**v0.2 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.
 **English** | [한국어](README.ko.md)
 
 A research skill for inspecting every declared unit in DEG/omics result tables or meta-analysis ledgers with **local Laya** or the **TypeSafe Jev API**. It preserves evidence links, records model decisions, and verifies inspection coverage before reporting follow-up candidates.
@@ -40,7 +42,7 @@ python -m pip install -e .
 Use an existing Laya server and a Docker-accessible tokenizer from the same model revision. Configure `backend.url`, `container`, and `model_path` for your installation. Normal discovery commands reuse the server.
 
 ```bash
-bio-topics plan --input examples/meta.csv --profile profiles/meta.example.yaml --out runs/meta-laya
+bio-topics plan --input examples/meta-clinical.csv --profile profiles/meta.clinical.example.yaml --out runs/meta-laya
 bio-topics run --out runs/meta-laya
 bio-topics verify --out runs/meta-laya
 ```
@@ -51,7 +53,7 @@ Set `TYPESAFE_API_KEY` and choose a pinned model version. `--allow-external` exp
 
 ```bash
 export TYPESAFE_API_KEY="YOUR_KEY"
-bio-topics plan --input examples/meta.csv --profile profiles/meta.jev.example.yaml --out runs/meta-jev
+bio-topics plan --input examples/meta-clinical.csv --profile profiles/meta.clinical.jev.example.yaml --out runs/meta-jev
 bio-topics run --out runs/meta-jev --allow-external
 bio-topics verify --out runs/meta-jev
 ```
@@ -117,4 +119,4 @@ Contract tests use synthetic fixtures. Scientific validation requires independen
 - [TypeSafe API](https://docs.typesafe.ai/api) and [model versions](https://docs.typesafe.ai/models)
 - [Laya repository](https://github.com/ConvaiInnovations/laya)
 
-Meta-analysis candidates receive a configurable paper-count incentive after exhaustive inspection. The default weight is `ranking.paper_count_weight: 0.25`; shared papers, studies and declared cohorts are grouped, and blocked/held evidence receives no extra count bonus. See [ranking and CSV fields](docs/candidate-csv.md).
+v0.2 meta-analysis links ledgers, normalizes confirmed terminology and exports clinical-question families. Publication counts and confirmed independent evidence counts are separate; unresolved independence stays blank. Their default weights are 0.25 and 0.5. Every detailed inspection remains in `inspection_results.csv`. See the [clinical pipeline](docs/clinical-pipeline.md).

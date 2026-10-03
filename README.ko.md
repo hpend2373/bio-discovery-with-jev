@@ -1,5 +1,7 @@
-# 바이오 연구 후보 전수 검사 — v0.1.3
+# 바이오 연구 후보 전수 검사 — v0.2.0
 
+
+**v0.2 임상 질문 모드:** [설계·원장 설정·CSV 안내](docs/clinical-pipeline.ko.md). 후보 묶음과 전체 검사 기록을 함께 제공합니다.
 [English](README.md) | **한국어**
 
 설치와 배포는 [기본 영문 안내](README.md), 모델 연결은 [한국어 설정 안내](docs/backends.ko.md)를 참고하세요.
@@ -40,7 +42,7 @@ python3 -m bio_topics run --out runs/my-deg
 python3 -m bio_topics verify --out runs/my-deg
 ```
 
-메타분석은 `examples/meta.csv`와 `profiles/meta.example.yaml`을 사용합니다. 예제는 합성 데이터이며 실제 생물학적 결과가 아닙니다.
+메타분석은 `examples/meta-clinical.csv`와 `profiles/meta.clinical.example.yaml`을 사용합니다. 예제는 합성 데이터이며 실제 생물학적 결과가 아닙니다.
 
 사용자 데이터에는 예제 프로파일을 복사해 `synthetic_example: false`, 연구 질문, 열 매핑, 실험·연구 정의를 수정합니다. 프로파일에 선언하지 않은 과학적 정보를 추정해 채우지 않습니다.
 
@@ -129,4 +131,4 @@ python3 -m unittest discover -s tests -v
 
 약한·보류 행 포함, 중복 코호트, 척도 혼합 방지, CI 처리, 수치 계산, XLSX, 실패·중단 재개, 캐시, 검사 기록 누락·변조, 원본 변경을 검사합니다.
 
-메타분석 후보는 전수 검사 후 논문 수 가점을 받습니다. 기본값은 `ranking.paper_count_weight: 0.25`이며 논문·연구·선언된 코호트 중복을 반영하고 보류·차단 근거는 가점에서 제외합니다. 자세한 기준은 [선정 점수와 CSV 열](docs/candidate-csv.ko.md)을 참고하세요.
+v0.2 메타분석은 원장 연결·정규화 후 임상 질문별 후보를 만듭니다. 논문 수와 확인된 독립 근거 수를 별도 표시하며 미확정 독립성은 빈 값으로 남깁니다. 가중치는 각각 0.25, 0.5입니다. 전체 세부 검사는 `inspection_results.csv`에 보존합니다. [임상 질문 파이프라인](docs/clinical-pipeline.ko.md)을 참고하세요.
