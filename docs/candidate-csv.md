@@ -1,7 +1,7 @@
 # Candidate CSV
 
 
-> The v0.2 default meta CSV follows the [clinical-question schema](clinical-pipeline.md). The row/operator schema and scoring formula below describe DEG and legacy `clinical.enabled: false` exports.
+> The v0.3 default meta CSV follows the [clinical-question schema](clinical-pipeline.md). The row/operator schema and scoring formula below describe DEG and legacy `clinical.enabled: false` exports.
 **English** | [한국어](candidate-csv.ko.md)
 
 `candidates.csv` is the default user deliverable. `run` writes it automatically and returns its absolute path in `candidate_csv`. A verified `report --out PATH` regenerates exports without calling a model. The entire candidate set is retained, including additional-confirmation items.

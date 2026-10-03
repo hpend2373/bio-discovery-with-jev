@@ -1,7 +1,7 @@
 # 후보 CSV
 
 
-> v0.2 메타분석 기본 CSV는 [임상 질문 방식](clinical-pipeline.ko.md)을 사용합니다. 아래 행·연산자별 스키마와 점수식은 DEG 및 `clinical.enabled: false`의 기존 방식에 해당합니다.
+> v0.3 메타분석 기본 CSV는 [임상 질문 방식](clinical-pipeline.ko.md)을 사용합니다. 아래 행·연산자별 스키마와 점수식은 DEG 및 `clinical.enabled: false`의 기존 방식에 해당합니다.
 [English](candidate-csv.md) | **한국어**
 
 `candidates.csv`가 기본 전달 결과물입니다. `run`에서 자동 생성하고 `candidate_csv`에 절대 경로를 반환합니다. 검증된 `report --out PATH`는 모델 호출 없이 파일을 다시 내보냅니다. 추가 확인 항목을 포함해 모든 후보를 유지합니다.
