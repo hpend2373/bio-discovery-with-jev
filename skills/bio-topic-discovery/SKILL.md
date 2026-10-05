@@ -27,7 +27,7 @@ The engine is this repository's `bio_topics` package. Install it with `pip insta
 5. Deliver **`candidates.csv` as the primary result**, with a clickable absolute file link. Read it together with `candidates.jsonl` and source evidence, check evidence/confirmation fields and inspection status, and present a concise summary. Keep every candidate in the CSV; Markdown/JSONL are supporting materials. Clearly mark incomplete inspections as provisional. If no candidates exist, deliver the header-only CSV and state the inspection status. Do not publish candidate CSVs containing private evidence without explicit authorization.
 6. Continue literature and System 2 review within the requested scope. Separate observations from hypotheses, record contrary evidence, falsification conditions, follow-up analyses/experiments, and sources. Do not invent literature, numbers, causal effects, or metabolic flux. Do not automatically mark review or human adoption complete.
 
-Meta-regression, funnel tests, joint diagnostic-accuracy synthesis, complex covariance models, and automatic long-card splitting are unsupported. Declared coverage does not imply every possible analysis was performed. Jev integration is implemented; live API validation remains separate.
+Meta-regression, funnel tests, joint diagnostic-accuracy synthesis, complex covariance models are unsupported. Long evidence paging is opt-in; see the v0.4 guide. Declared coverage does not imply every possible analysis was performed. Jev integration is implemented; live API validation remains separate.
 
 ## Current quality limits
 
@@ -40,3 +40,7 @@ Declare upper-question, stratum and sensitivity dimensions in `clinical.partitio
 Read independent counts from `analysis_sets.csv`, attached to selected effect rows and explicit overlap rules. Documented sampling frames (institutions, periods, eligibility) can support independence at a declared evidence level; unresolved counts stay blank. Inspect all allowed alternatives. Never choose a representative estimate by effect direction, significance or SE. Report publication counts separately; the optional bonus defaults to zero and is capped at one credit per confirmed selected participant identity. Priority is for review, not pooling weights or certainty.
 
 `candidates.csv` contains upper-question families; `inspection_results.csv` retains all jobs; `candidate_effects.csv` connects every same-question effect and role, including opposing, null, background and held evidence. Distinguish protocol, posthoc exploratory and validation questions with source/date provenance. Unregistered discoveries and new result-driven hypotheses remain posthoc exploratory. Model completion does not certify source verification, independent dual review, outcome RoB or synthesis approval; each gate requires its own supplied evidence. Preserve old source snapshots and use a new run for changed code or policy.
+
+## v0.4
+
+Read `docs/long-evidence.md` in the engine. Enable `inspection.partition_long_evidence: true` in new profiles for preflighted, lossless pages. Verify all pages and logical parents; report local-page coverage separately from joint full-context reasoning. Use `link-ledger` with exact effect IDs, preserve all missing/conflicting/unused rows, and never reconstruct a missing source ledger by assumption.
