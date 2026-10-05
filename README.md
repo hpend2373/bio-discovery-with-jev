@@ -8,6 +8,10 @@ A research skill for inspecting every declared unit in DEG/omics result tables o
 
 The current engine uses categorical decisions and template-based candidate titles. Candidates need scientific review, literature checks, and concrete hypothesis development before adoption.
 
+## v0.4: evidence paging and ledger linkage
+
+Enable `inspection.partition_long_evidence: true` for lossless, preflighted pages. Use `link-ledger` for exact effect-ID joins with complete coverage checks. [Guide](docs/long-evidence.md). Page completion does not imply one global full-context judgment.
+
 ## Computing time and what the results mean
 
 ![Measured GPU request time](docs/evaluation/latency-comparison.png)
@@ -120,3 +124,13 @@ Contract tests use synthetic fixtures. Scientific validation requires independen
 - [Laya repository](https://github.com/ConvaiInnovations/laya)
 
 v0.3 meta-analysis links ledgers, normalizes confirmed terminology and exports clinical-question families. Questions have declared upper-question, stratum and sensitivity levels. Independence belongs to selected analysis sets, with blank unresolved counts. Publication credit defaults to zero and is capped for repeated publications. `analysis_sets.csv` records selected effects, overlap and review gates; `candidate_effects.csv` links all same-question effects and roles. Model completion does not certify source checks, dual review, outcome RoB or synthesis approval. See the [clinical pipeline](docs/clinical-pipeline.md).
+
+## v0.4.1 inspection and output updates
+
+- Set `inspection.compact_evidence: true` to use reversible tables and shared provenance references. Every original value is retained and checked by round-trip reconstruction; operator questions and declared inspection scope stay intact. Oversized tables are expanded before lossless paging.
+- An explicit unresolved diagnosis/timing review clears an inherited exposure-timing label. The original label and review evidence remain in provenance. This does not infer a replacement window or certify the source.
+- Exact ID linkage and metadata completeness are reported separately. Population descriptions stay descriptions; they do not establish participant identity or independence.
+- In clinical mode, `candidates.csv` contains families with complete question metadata, `review_queue.csv` holds incomplete families, and `all_candidate_families.csv` preserves every family. `candidate_effects.csv` links families in both files; `inspection_results.csv` retains all inspections. Complete question metadata does not establish synthesis eligibility.
+- Changed scientific inputs require new inspections. Existing completed runs keep their frozen code and inputs. This release does not provide automatic cross-run reuse of model receipts.
+
+The 69 synthetic software tests pass. These checks cover implementation contracts and do not establish scientific validity or live Jev performance.
