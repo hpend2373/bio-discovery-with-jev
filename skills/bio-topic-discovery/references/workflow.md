@@ -32,3 +32,7 @@ Meta-analysis ranking uses a default paper-count weight of 0.25. Configure `rank
 ## v0.3 clinical questions and analysis sets
 
 Read `profiles/meta.clinical.example.yaml` and the engine's `docs/clinical-pipeline.md`. Declare hierarchy with `clinical.partition`, outcome-blind selection rules with `clinical.analysis_sets`, and origin provenance with `clinical.question_registry`. Link scoped metadata through `clinical.ledger_files`. Review selected effects, overlap policy, evidence levels and unresolved relationships in every analysis set; verify that candidate-effect links retain opposing and null results. Source checks, dual review, outcome RoB and synthesis approval are independent gates. Publication bonus defaults to zero with a repeated-publication cap. The old schema/scoring above is for `clinical.enabled: false` reproducibility. Structured lists in new clinical CSV files use JSON.
+
+## v0.4
+
+Read `docs/long-evidence.md` in the engine. Enable `inspection.partition_long_evidence: true` in new profiles for preflighted, lossless pages. Verify all pages and logical parents; report local-page coverage separately from joint full-context reasoning. Use `link-ledger` with exact effect IDs, preserve all missing/conflicting/unused rows, and never reconstruct a missing source ledger by assumption.

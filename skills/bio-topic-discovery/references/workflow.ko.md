@@ -32,3 +32,7 @@ python3 scripts/run.py status --out /absolute/new-run
 ## v0.3 임상 질문·분석 세트
 
 메타분석은 `profiles/meta.clinical.example.yaml`과 엔진의 `docs/clinical-pipeline.ko.md`를 읽습니다. 상위 질문·층·민감도는 `clinical.partition`, 선택 규칙은 결과값을 사용하지 않는 `clinical.analysis_sets`, 생성 경위는 `clinical.question_registry`로 선언합니다. 원장은 범위를 지정한 `clinical.ledger_files`로 연결합니다. 분석 세트마다 선택 효과·중복 정책·독립성 수준·미결 관계를 확인하고, 후보–효과 연결표에서 모든 반대·무효 결과가 유지되는지 검증합니다. 단계별 원문·이중검토·결과별 RoB·승인은 전수 검사와 별도입니다. 논문 가점은 기본 0이며 중복 출판에 상한을 적용합니다. 위 구형 스키마·점수 설명은 `clinical.enabled: false` 재현용입니다. 새 임상 CSV의 목록 셀은 JSON입니다.
+
+## v0.4
+
+엔진의 `docs/long-evidence.ko.md`를 읽습니다. 새 프로파일에 `inspection.partition_long_evidence: true`를 지정하고 모든 조각과 원래 단위의 완료를 검증합니다. 조각별 검사와 전체 근거의 공동 판단을 구분합니다. `link-ledger`로 효과 ID를 정확히 연결하고 미연결·충돌·입력 밖 원장 행을 기록합니다. 없는 원장은 추정으로 복원하지 않습니다.
