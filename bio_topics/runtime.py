@@ -9,12 +9,13 @@ from .clinical import audit, enabled
 from .backend import HTTPBackend, slice_receipt, validate_receipt, validate_response
 from .ingest import read_profile, read_table
 from .plan import batch_questions, enumerate_units, operators, preflight, questions
+from .partitioning import make_pages, execution_units, FORMAT
 from .report import export_report
 from .store import Cache, connect, counts, get_meta, initialize, set_meta
 from .util import canonical, digest, file_hash, now, source_hash, write_json
 
 
-def create_plan(input_path, profile_path, out):
+def create_plan(input_path, profile_path, out, context_checker=None):
     out = Path(out).resolve()
     if out.exists():
         raise ValueError("출력 폴더가 이미 있습니다. 새 실행 폴더를 쓰거나 run으로 재개하세요.")
@@ -25,7 +26,25 @@ def create_plan(input_path, profile_path, out):
     if tmp.exists():
         raise ValueError("이전 계획 임시 폴더가 있습니다. 확인 후 다른 출력 이름을 사용하세요.")
     tmp.mkdir(parents=True)
+    planning_backend = None
+    partition_index = None
     try:
+        if profile['inspection'].get('partition_long_evidence'):
+            config = profile.get('backend', {})
+            identity = None
+            if context_checker is None:
+                if config.get('kind', 'laya') == 'laya':
+                    planning_backend = HTTPBackend(config)
+                    identity = planning_backend.identity
+                    context_checker = lambda state: planning_backend.guard.check(state, batch_questions(profile), planning_backend.max_len, planning_backend.head_max_len)
+                else:
+                    limit = config.get('max_body_bytes', 262144)
+                    def context_checker(state):
+                        payload = {'state': state, 'model': config.get('model'), 'questions': batch_questions(profile)}
+                        size = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
+                        if size > limit: raise ValueError('request body exceeds byte budget')
+                        return {'ok': True, 'body_bytes': size}
+            partition_index = {'format': FORMAT, 'provider': identity, 'parents': {}}
         ledger_files = {}
         for i, source in enumerate(profile.get("clinical", {}).get("ledger_inputs", [])):
             original = Path(source["path"])
@@ -39,6 +58,12 @@ def create_plan(input_path, profile_path, out):
         write_json(tmp / "records.json", records)
         if enabled(profile):
             write_json(tmp / "clinical-audit.json", audit(records, profile))
+            from .ledger import linkage_audit
+            from .clinical_report import write_csv
+            linkage = linkage_audit(records, profile)
+            write_json(tmp / 'ledger-linkage.json', linkage)
+            write_csv(tmp / 'ledger-linkage.csv', linkage['rows'], ['record_id', 'source_effect_id', 'entity', 'lookup_id', 'status', 'conflicts', 'source_references'])
+            write_csv(tmp / 'unused-ledger-entries.csv', linkage['unused_ledger_entries'], ['entity', 'id', 'status', 'source_reference'])
         frozen_input = "input" + Path(input_path).suffix.lower()
         shutil.copyfile(input_path, tmp / frozen_input)
         write_json(tmp / "mapping.json", mapping)
@@ -49,7 +74,19 @@ def create_plan(input_path, profile_path, out):
         job_chain = ""
         unit_count = job_count = 0
         names = operators(profile)
-        for u in enumerate_units(records, profile):
+        logical_counts = Counter()
+        logical_seen = set()
+        def planned_units():
+            for parent in enumerate_units(records, profile):
+                if parent['id'] in logical_seen: continue
+                logical_seen.add(parent['id']); logical_counts[parent['kind']] += 1
+                if partition_index is None:
+                    yield parent
+                else:
+                    pages, spec = make_pages(parent, context_checker)
+                    partition_index['parents'][parent['id']] = spec
+                    yield from pages
+        for u in planned_units():
             # Identical LOO scenarios from distinct full universes can be deduplicated only
             # when the complete unit, including full estimate and excluded record, is identical.
             body = canonical(u)
@@ -70,12 +107,17 @@ def create_plan(input_path, profile_path, out):
                 db.commit()
                 print(canonical({"stage": "planning", "units": unit_count, "jobs": job_count}), flush=True)
         db.commit()
-        if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"] or kind_counts["analysis_set"] != flight.get("analysis_sets", 0):
+        if logical_counts["row"] != len(records) or logical_counts["pair"] != flight["pairs"] or logical_counts["cell"] != flight["cells"] or logical_counts["analysis_set"] != flight.get("analysis_sets", 0):
             raise ValueError("검사 목록의 행·셀·관계 수가 독립 계산과 불일치")
         contract = {"schema_version": 1, "input_file": frozen_input, "input_hash": file_hash(tmp / frozen_input),
                     "ledger_files": ledger_files, "profile_hash": digest(profile), "records_hash": digest(records), "code_hash": source_hash(),
                     "unit_count": unit_count, "job_count": job_count, "units_by_kind": dict(kind_counts),
                     "unit_chain": unit_chain, "job_chain": job_chain, "operators": names, "preflight": flight}
+        if partition_index is not None:
+            write_json(tmp / 'partition-plan.json', partition_index)
+            contract.update(partition_hash=digest(partition_index), logical_units_by_kind=dict(logical_counts),
+                            logical_unit_count=sum(logical_counts.values()), context_preflight='all_pages_fit',
+                            context_semantics='local_page_judgments_with_complete_declared_pair_fields')
         set_meta(db, "contract", contract)
         db.close()
         shutil.copytree(Path(__file__).parent, tmp / "source" / "bio_topics", ignore=shutil.ignore_patterns("__pycache__"))
@@ -87,6 +129,8 @@ def create_plan(input_path, profile_path, out):
         # Preserve failed planning artifacts for inspection; never label them as a run.
         write_json(tmp / "planning-failure.json", {"status": "planning_failed", "time": now()})
         raise
+    finally:
+        if planning_backend: planning_backend.close()
 
 
 def verify(out):
@@ -108,12 +152,15 @@ def verify(out):
     reparsed, _ = read_table(out / contract["input_file"], profile)
     if digest(reparsed) != digest(records):
         errors.append("normalized_records_do_not_match_source")
+    index = json.loads((out / 'partition-plan.json').read_text()) if contract.get('partition_hash') else None
+    if index is not None and digest(index) != contract['partition_hash']:
+        errors.append('partition_plan_changed')
     unit_chain = job_chain = ""
     all_q = batch_questions(profile)
     seen = set()
     n_units = n_jobs = 0
     kind_counts = Counter()
-    for u in enumerate_units(records, profile):
+    for u in execution_units(records, profile, index):
         if u["id"] in seen:
             continue
         seen.add(u["id"])
@@ -145,7 +192,8 @@ def verify(out):
                 except (ValueError, KeyError, TypeError):
                     errors.append("invalid_receipt:" + jid)
     flight = preflight(records, profile)
-    if kind_counts["row"] != len(records) or kind_counts["pair"] != flight["pairs"] or kind_counts["cell"] != flight["cells"] or kind_counts["analysis_set"] != flight.get("analysis_sets", 0):
+    logical_counts = Counter(u['kind'] for u in enumerate_units(records, profile)) if index is not None else kind_counts
+    if logical_counts["row"] != len(records) or logical_counts["pair"] != flight["pairs"] or logical_counts["cell"] != flight["cells"] or logical_counts["analysis_set"] != flight.get("analysis_sets", 0):
         errors.append("independent_coverage_counts_mismatch")
     saved_units = db.execute("SELECT count(*) FROM units").fetchone()[0]
     saved_jobs = db.execute("SELECT count(*) FROM jobs").fetchone()[0]
@@ -156,6 +204,22 @@ def verify(out):
     stats = counts(db)
     if stats["successful"] != contract["job_count"] or stats["failed"] or stats["pending"]:
         errors.append("unresolved_model_inspections")
+    logical_status = None
+    if index is not None:
+        from .clinical_report import write_csv
+        parents = {}
+        for u in db.execute('SELECT id,body FROM units ORDER BY seq'):
+            body = json.loads(u['body']); pid = body.get('parent_unit_id', body['id'])
+            item = parents.setdefault(pid, {'parent_unit_id': pid, 'kind': body['kind'], 'pages': 0, 'successful_pages': 0,
+                                           'joint_full_context': 'parent_unit_id' not in body})
+            statuses = [j[0] for j in db.execute('SELECT status FROM jobs WHERE unit_id=?', (u['id'],))]
+            item['pages'] += 1
+            item['successful_pages'] += bool(statuses) and all(v in {'evaluated','cached'} for v in statuses)
+        for item in parents.values(): item['completed'] = item['pages'] == item['successful_pages']
+        write_csv(out / 'partition-coverage.csv', parents.values(), ['parent_unit_id','kind','pages','successful_pages','completed','joint_full_context'])
+        logical_status = {'planned': len(parents), 'completed': sum(x['completed'] for x in parents.values()),
+                          'partitioned_parents': sum(not x['joint_full_context'] for x in parents.values()),
+                          'meaning': 'All pages inspected; partitioned parents do not have a single joint full-context judgment.'}
     simulated = get_meta(db, "simulated") is True
     if simulated:
         errors.append("simulated_backend_not_scientific_coverage")
@@ -163,6 +227,7 @@ def verify(out):
     result = {"status": "verified" if not errors else "incomplete_or_invalid", "checked": now(),
               "counts": stats, "errors": errors, "candidate_truth_validated": False,
               "downstream_review": "pending"}
+    if logical_status is not None: result["logical_units"] = logical_status
     write_json(out / "verification.json", result)
     return result
 
@@ -181,6 +246,11 @@ def run(out, allow_external=False, retry_failed=False, backend=None):
     cache = None
     manifest = json.loads((out / "manifest.json").read_text())
     try:
+        if contract.get('partition_hash'):
+            index = json.loads((out / 'partition-plan.json').read_text())
+            if digest(index) != contract['partition_hash']: raise ValueError('Partition plan changed')
+            if index['provider'] is not None and index['provider'] != backend.identity:
+                raise ValueError('Preflight backend/tokenizer differs from execution backend')
         old_provider = get_meta(db, "provider")
         if old_provider is not None and old_provider != backend.identity:
             raise ValueError("백엔드·모델·토크나이저가 변경되어 같은 실행으로 재개할 수 없습니다.")

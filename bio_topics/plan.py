@@ -67,12 +67,15 @@ def unit(kind, scope, records, fact, profile):
         if kind == "cell":
             # Complete clinical facts for each row, never a counts-only model input.
             state["evidence_rows"] = [{"id": r["id"], "fields": r["fields"],
-                                      "clinical": r["clinical"], "facts": record_facts(r)} for r in records]
+                                      "clinical": r["clinical"], "facts": record_facts(r), **({"raw": r["raw"], "original_fields": r.get("original_fields", {}), "parse_issues": r["parse_issues"]} if profile["inspection"].get("compact_evidence") else {})} for r in records]
     if kind in ("row", "pair", "analysis_set"):
         # Keep all source fields, including unmapped text. No pre-model FDR/top-K filter.
         state["records"] = records
     if profile.get("knowledge_relations"):
         state["declared_knowledge"] = profile["knowledge_relations"]
+    if profile["inspection"].get("compact_evidence"):
+        from .compact import checked_pack
+        state = checked_pack(state)
     return {"id": uid, "kind": kind, "scope": scope, "record_ids": ids, "state": state}
 
 

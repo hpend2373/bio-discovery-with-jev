@@ -12,7 +12,7 @@ from .store import connect, counts
 from .util import canonical, digest, write_json
 
 CLINICAL_COLUMNS = [
-    "rank", "id", "candidate_kind", "clinical_question_ids", "route", "operator", "focus", "question", "scope",
+    "rank", "output_category", "independence_evaluation_status", "id", "candidate_kind", "clinical_question_ids", "route", "operator", "focus", "question", "scope",
     "record_ids", "stratum_ids", "analysis_group_ids", "analysis_set_ids", "analysis_set_counts", "question_origins",
     "generated_hypothesis_origin", "inspection_ids", "inspection_count", "model_choice_counts", "model_probability_range",
     "question_complete", "testability_status", "paper_count", "paper_count_basis", "missing_paper_identity_rows",
@@ -35,7 +35,7 @@ ANALYSIS_SET_COLUMNS = ["id", "candidate_ids", "question_id", "stratum_id", "ana
 LINK_COLUMNS = ["candidate_id", "record_id", "source_effect_id", "publication_id", "question_id", "stratum_id",
                 "analysis_set_id", "role", "selected", "role_reason", "question_origin", "source_verified",
                 "dual_review_completed", "outcome_rob_assessed", "rob_judgment", "synthesis_approved"]
-INSPECTION_COLUMNS = ["job_id", "unit_id", "unit_kind", "operator", "status", "model_choice", "focus",
+INSPECTION_COLUMNS = ["job_id", "unit_id", "unit_kind", "parent_unit_id", "context_mode", "entry_range", "operator", "status", "model_choice", "focus",
                       "model_selection_probability", "candidate_ids", "record_ids", "clinical_question_ids",
                       "error", "inspection_status", "verification_status", "inspection_coverage"]
 
@@ -104,10 +104,11 @@ def export_clinical(out):
             qids = sorted({r["clinical"]["question_id"] for r in sources})
             inspection = {"job_id": job["id"], "unit_id": unit["id"], "unit_kind": unit["kind"], "operator": job["operator"],
                           "status": job["status"], "error": job["error"], "record_ids": unit["record_ids"],
+                          "parent_unit_id": unit.get("parent_unit_id", unit["id"]), "context_mode": unit.get("context_mode", "joint_full"), "entry_range": unit.get("entry_range"),
                           "clinical_question_ids": qids, "candidate_ids": [], **run_status}
             inspections.append(inspection)
             if unit["kind"] == "analysis_set":
-                analysis_inspections[unit["state"]["observations"]["id"]].append(job["status"])
+                analysis_inspections[unit["scope"]["analysis_set_id"]].append(job["status"])
             all_decisions.write(canonical({"job_id": job["id"], "unit_id": unit["id"], "operator": job["operator"],
                                           "status": job["status"], "error": job["error"], "receipt": receipt}) + "\n")
             if not receipt or job["status"] not in ("evaluated", "cached"):
@@ -190,7 +191,8 @@ def export_clinical(out):
                          "Independence counts belong to selected analysis sets; no candidate-level total is inferred.",
                          "Model inspection does not verify original papers, dual review, outcome RoB or synthesis approval.",
                          "Opposing, null and favorable results are linked with the same outcome-blind rules.",
-                         "Background decisions and failed/pending inspections remain in inspection_results.csv."],
+                         "Background decisions and failed/pending inspections remain in inspection_results.csv.",
+                         "Partitioned inspections are local page judgments. Full page coverage does not establish a global joint conclusion."],
                  status="system2_and_human_review_pending", **run_status)
         c.update({k: evidence[k] for k in ("paper_count", "paper_count_basis", "missing_paper_identity_rows", "unique_study_count", "cohort_count", "population_count")})
         c.update(score_clinical(priority, policy))
@@ -211,7 +213,14 @@ def export_clinical(out):
                 linked_records.add(rid)
         assert linked_records == family["record_ids"], "Every same-question row must have an explicit candidate link"
         candidates.append(c)
-    ordered = order_candidates(candidates)
+    for c in candidates:
+        c["output_category"] = "clinical_candidate" if c["question_complete"] else "metadata_review"
+        c["independence_evaluation_status"] = "available" if c.get("priority_independent_floor") not in (None, "") else "not_established"
+    all_families = order_candidates(candidates)
+    ordered = [c for c in all_families if c["question_complete"]]
+    review_queue = [c for c in all_families if not c["question_complete"]]
+    write_csv(out / "all_candidate_families.csv", all_families, CLINICAL_COLUMNS)
+    write_csv(out / "review_queue.csv", review_queue, CLINICAL_COLUMNS)
     for rank, c in enumerate(ordered, 1):
         c["rank"] = rank
     write_csv(out / "candidates.csv", ordered, CLINICAL_COLUMNS)
@@ -229,7 +238,7 @@ def export_clinical(out):
         for c in ordered:
             handle.write(canonical(c) + "\n")
     write_json(out / "candidate-summary.json", {"total": len(ordered), "by_route": dict(Counter(c["route"] for c in ordered)),
-               "inspection_records": len(inspections), "all_candidates_exported": True, "primary_output": "candidates.csv",
+               "inspection_records": len(inspections), "all_candidates_exported": True, "all_families_output": "all_candidate_families.csv", "review_queue_count": len(review_queue), "primary_output": "candidates.csv",
                "inspection_output": "inspection_results.csv", "analysis_sets_output": "analysis_sets.csv",
                "candidate_effects_output": "candidate_effects.csv", "analysis_set_count": len(analysis_sets), "ranking_policy": policy,
                "paper_count_incentive_applied": policy["paper_count_weight"] > 0, "candidate_kind": "clinical_question_family", **run_status,

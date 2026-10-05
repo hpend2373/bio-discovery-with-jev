@@ -15,6 +15,11 @@ def main(argv=None):
     plan.add_argument("--input", required=True)
     plan.add_argument("--profile", required=True)
     plan.add_argument("--out", required=True)
+    linkage = commands.add_parser('link-ledger', help='Exact effect-ID source ledger join; preserve inputs and export unmatched/conflict audit')
+    for name in ('input','profile','ledger','out'): linkage.add_argument('--'+name, required=True)
+    linkage.add_argument('--sheet')
+    linkage.add_argument('--ledger-ci-level-percent', action='store_true', help='Explicitly declare ledger CI levels as percentages, independently of the input table')
+    linkage.add_argument('--allow-unmatched', action='store_true', help='Keep missing rows unresolved; default requires all input effect IDs')
     execution = commands.add_parser("run", help="전수 모델 검사 실행 또는 재개")
     execution.add_argument("--out", required=True)
     execution.add_argument("--allow-external", action="store_true", help="Jev에 근거 전송을 명시적으로 허용")
@@ -24,7 +29,10 @@ def main(argv=None):
         command.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "plan":
+        if args.command == 'link-ledger':
+            from .ledger_import import prepare_effect_ledger
+            result = prepare_effect_ledger(args.input,args.profile,args.ledger,args.out,args.sheet,not args.allow_unmatched,args.ledger_ci_level_percent)
+        elif args.command == "plan":
             result = create_plan(args.input, args.profile, args.out)
         elif args.command == "run":
             result = run(args.out, args.allow_external, args.retry_failed)

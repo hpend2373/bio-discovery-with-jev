@@ -23,9 +23,15 @@ STUDY_FIELDS = {"design", "data_source", "country"}
 POPULATION_FIELDS = {"study_id", "cohort_ids", "population", "population_subgroup", "treatment_stage",
                      "recruitment_start", "recruitment_end", "institutions", "eligibility"}
 ANALYSIS_METADATA = set(QUESTION_FIELDS + ANALYSIS_FIELDS) | {"population_id", "study_id", "cohort_ids",
-                   "analysis_role", "outcome_family", "exposure_start", "exposure_updating"}
+                   "analysis_role", "outcome_family", "exposure_start", "exposure_updating", "population_subgroup"}
+TIMING_REVIEW_FIELDS = {"diagnosis_window", "display_window", "exposure_timing_review_status",
+                        "exposure_timing_remaining_uncertainty", "exposure_timing_evidence_id", "review_status"}
+EFFECT_FIELDS = TIMING_REVIEW_FIELDS | {"measure", "value", "ci_lower", "ci_upper", "ci_level", "se", "se_scale", "ci_method", "ci_distribution", "n", "df", "p_value",
+                 "source_location", "source_local_path", "source_blocked", "hold_reason", "human_checked", "synthesis_approved",
+                 "source_verification_status", "source_verification_reference", "dual_review_status", "dual_review_independent", "reviewer_ids", "dual_review_reference",
+                 "rob_status", "rob_judgment", "rob_tool", "rob_source_reference", "rob_outcome_definition"}
 ALLOWED = {"publications": PUBLICATION_FIELDS, "studies": STUDY_FIELDS, "populations": POPULATION_FIELDS,
-           "analyses": ANALYSIS_METADATA, "effects": ANALYSIS_METADATA | {"publication_id", "analysis_id"}}
+           "analyses": ANALYSIS_METADATA, "effects": ANALYSIS_METADATA | EFFECT_FIELDS | {"publication_id", "analysis_id"}}
 RELATIONS = {"same", "partial_overlap", "contains", "disjoint", "unknown"}
 
 
@@ -44,7 +50,7 @@ def enabled(profile):
 
 def validate_config(profile):
     cfg = profile.get("clinical", {})
-    allowed = {"enabled", "ledger", "normalization", "question_fields", "analysis_fields", "cohort_relations", "ledger_inputs", "partition", "independence_policy", "analysis_sets", "question_registry"}
+    allowed = {"enabled", "ledger", "normalization", "question_fields", "analysis_fields", "cohort_relations", "ledger_inputs", "partition", "independence_policy", "analysis_sets", "question_registry", "ledger_requirements"}
     if not isinstance(cfg, dict) or set(cfg) - allowed:
         raise ValueError("Unknown clinical configuration key")
     if "enabled" in cfg and not isinstance(cfg["enabled"], bool):
@@ -72,7 +78,7 @@ def validate_config(profile):
             if not isinstance(entry.get("confirmed"), bool) or not entry.get("source_reference"):
                 raise ValueError("Ledger entry requires confirmed and source_reference")
             for field, value in entry["fields"].items():
-                if field in {"cohort_ids", "adjustment_variables"}:
+                if field in {"cohort_ids", "adjustment_variables", "reviewer_ids"}:
                     if not isinstance(value, list) or any(not isinstance(v, str) for v in value):
                         raise ValueError(field + " must be a string list")
                 elif field == "effect_adjusted":
@@ -88,11 +94,15 @@ def validate_config(profile):
         if not isinstance(rules, list):
             raise ValueError("Normalization rules must be a list")
         for rule in rules:
-            if (not isinstance(rule, dict) or set(rule) != {"canonical", "aliases", "confirmed", "source_reference"}
+            if (not isinstance(rule, dict) or set(rule) - {"canonical", "aliases", "confirmed", "source_reference", "assign"} or not {"canonical", "aliases", "confirmed", "source_reference"} <= set(rule)
                     or not isinstance(rule["canonical"], str) or not known(rule["canonical"])
                     or not isinstance(rule["aliases"], list) or any(not isinstance(a, str) or not known(a) for a in rule["aliases"])
                     or not isinstance(rule["confirmed"], bool) or not rule["source_reference"]):
                 raise ValueError("Invalid normalization rule")
+            assignments = rule.get('assign', {})
+            if not isinstance(assignments, dict) or set(assignments) - {'lag','exposure_updating','exposure_duration','exposure_start','dose'} or any(not isinstance(v,str) or not known(v) for v in assignments.values()):
+                raise ValueError('Normalization assignments must be explicit dose/time qualifiers')
+            if assignments and field in assignments: raise ValueError('A normalization cannot assign its own field')
             if rule["confirmed"]:
                 for alias in rule["aliases"] + [rule["canonical"]]:
                     key = lexical(alias)
@@ -168,6 +178,21 @@ def prepare(records, profile):
                     f[field] = None
                 elif not known(f.get(field)):
                     f[field] = deepcopy(value)
+        # Reviewed unresolved timing overrides inherited labels without inventing a window.
+        raw = record.get("raw", {})
+        review = {k: f.get(k, raw.get(k)) for k in TIMING_REVIEW_FIELDS}
+        review_status = str(review.get("exposure_timing_review_status") or review.get("review_status") or "").upper()
+        diagnosis = str(review.get("diagnosis_window") or "").upper()
+        timing_review = {"status": review_status, "evidence": review, "inherited_value": f.get("exposure_timing")}
+        if "UNRESOLVED" in review_status or diagnosis.startswith("UNRESOLVED"):
+            provenance.setdefault("exposure_timing", []).append({"value": None, "source": "timing_review",
+                "review_status": review_status, "diagnosis_window": diagnosis,
+                "source_reference": review.get("exposure_timing_evidence_id"),
+                "remaining_uncertainty": review.get("exposure_timing_remaining_uncertainty")})
+            f["exposure_timing"] = None
+            timing_review["resolution"] = "unresolved_review_overrides_inherited_label"
+        else:
+            timing_review["resolution"] = "no_explicit_unresolved_review"
         normalization = []
         for field, rules in cfg.get("normalization", {}).items():
             if field in conflicts or not known(f.get(field)) or not isinstance(f[field], str):
@@ -177,6 +202,14 @@ def prepare(records, profile):
                     normalization.append({"field": field, "original": f[field], **deepcopy(rule)})
                     if rule["confirmed"]:
                         f[field] = rule["canonical"]
+                        for target, value in rule.get('assign', {}).items():
+                            provenance.setdefault(target, []).append({'value': value, 'source': 'explicit_normalization_qualifier',
+                                                                     'source_field': field, 'source_reference': rule['source_reference']})
+                            if target in conflicts: continue
+                            if known(f.get(target)) and normalized_value(f[target], target, cfg) != normalized_value(value, target, cfg):
+                                conflicts.add(target); f[target] = None
+                            elif not known(f.get(target)):
+                                f[target] = value
                         break
         parts = partition(profile)
         missing = [k for k in parts["question"] if not known(f.get(k))]
@@ -199,12 +232,14 @@ def prepare(records, profile):
                               "sensitivity_scope": sensitivity_scope, "missing_stratum_fields": stratum_missing,
                               "question_origin": question_origin(scope, profile), "role": role, "missing_question_fields": missing,
                               "conflicts": sorted(conflicts), "links": links, "proposals": proposals,
-                              "provenance": provenance, "normalization": normalization}
+                              "provenance": provenance, "normalization": normalization, "timing_review": timing_review}
     return result
 
 
 def audit(records, profile):
     return {"version": 2, "partition_policy": partition(profile), "rows": len(records), "questions": len({r["clinical"]["question_id"] for r in records}),
+            "metadata_completeness": {k: sum(known(r["fields"].get(k)) for r in records) for k in ("study_id", "exposure_class", "exposure_timing", "population", "treatment_stage", "population_id", "cohort_ids")},
+            "exact_id_linkage_is_metadata_completion": False,
             "unresolved_rows": sum(bool(r["clinical"]["missing_question_fields"] or r["clinical"]["conflicts"]) for r in records),
             "relation_declarations": profile.get("clinical", {}).get("cohort_relations", []),
             "records": [{"record_id": r["id"], **r["clinical"]} for r in records]}

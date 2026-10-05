@@ -100,7 +100,7 @@ def export_report(out):
                          "operator": row["operator"], "focus": focus, "route": route,
                          "question": TEMPLATES[row["operator"]].format(focus=FOCUS_KO[focus]),
                          "scope": unit["scope"], "scope_text": scope_text,
-                         "record_ids": unit["record_ids"], "observations": unit["state"]["observations"],
+                         "record_ids": unit["record_ids"], "observations": unit["state"].get("observations", {"context_mode": "partitioned_local", "entry_range": unit.get("entry_range"), "evidence_entries": unit["state"].get("evidence_entries")}),
                          "model_choice": choice, "model_selection_probability": answers["discovery"]["probabilities"][choice],
                          "status": "system2_and_human_review_pending", "falsification": "대안 설명과 반증 조건은 근거를 읽고 추가 작성해야 함",
                          "limits": unit["state"]["limits"], "required_checks": required_checks,

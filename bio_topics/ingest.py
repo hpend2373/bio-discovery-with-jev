@@ -14,6 +14,15 @@ from .ledger import expand_ledger_files
 
 NUMERIC = {"log2fc", "fdr", "p_value", "value", "ci_lower", "ci_upper", "ci_level", "se", "n", "df"}
 BOOLEAN = {"human_checked", "synthesis_approved", "source_blocked", "primary_candidate", "dual_review_independent"}
+def adjustment_flag(value):
+    if isinstance(value, bool): return value
+    text = str(value or '').strip().casefold()
+    if text in {'yes', 'true', '1', 'adjusted'}: return True
+    if text in {'no', 'false', '0', 'crude', 'unadjusted'}: return False
+    if text in {'', 'unknown', 'unclear', 'not applicable', 'not specified', 'na', 'n/a'}: return None
+    raise ValueError('Unrecognized adjustment status: ' + str(value))
+
+
 LISTS = {"cohort_ids", "adjustment_variables", "reviewer_ids"}
 
 
@@ -42,6 +51,10 @@ def read_profile(path):
     if not isinstance(profile.get("question"), str) or not profile["question"].strip():
         raise ValueError("프로젝트 연구 질문(question)이 필요합니다.")
     contract = profile.get("inspection", {})
+    if not isinstance(contract.get("compact_evidence", False), bool):
+        raise ValueError("compact_evidence must be boolean")
+    if not isinstance(contract.get("partition_long_evidence", False), bool):
+        raise ValueError("partition_long_evidence must be boolean")
     if contract.get("pairs") not in ("all", "within_groups", "within_questions", "none"):
         raise ValueError("inspection.pairs를 all / within_groups / within_questions / none 중 하나로 선언하세요.")
     if contract["pairs"] == "within_groups" and not contract.get("pair_group_by"):
@@ -139,7 +152,8 @@ def read_table(path, profile):
     if not raw_rows:
         raise ValueError("입력 행이 없습니다. 빈 데이터로 전수 완료를 만들지 않습니다.")
     required = {"entity_id", "comparison"} if profile["domain"] == "deg" else ({"measure", "value"} if enabled(profile) else {"study_id", "measure", "value"})
-    if required - profile["columns"].keys():
+    ledger_fields = {key for entry in profile.get('clinical', {}).get('ledger', {}).get('effects', []) if entry.get('confirmed') for key in entry.get('fields', {})}
+    if required - (profile["columns"].keys() | ledger_fields):
         raise ValueError(f"필수 열 매핑 누락: {sorted(required - profile['columns'].keys())}")
     records = []
     for offset, raw in enumerate(raw_rows, 2):
@@ -155,6 +169,8 @@ def read_table(path, profile):
                         if not 0 < value <= 100:
                             raise ValueError("CI 백분율이 0~100 범위를 벗어남")
                         value /= 100
+                elif field == "effect_adjusted":
+                    value = adjustment_flag(value)
                 elif field in BOOLEAN:
                     value = boolean(value)
                 elif field in LISTS:
