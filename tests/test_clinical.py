@@ -39,6 +39,15 @@ def rel(left, right, kind="disjoint", **kwargs):
 
 
 class ClinicalTests(unittest.TestCase):
+    def test_unresolved_timing_review_overrides_inherited_label(self):
+        r = record(1)
+        r["raw"].update(diagnosis_window="UNRESOLVED_CONFLICT", review_status="UNRESOLVED_SOURCE_CONFLICT")
+        out = prepare([r], profile())[0]
+        self.assertIsNone(out["fields"]["exposure_timing"])
+        self.assertEqual(out["original_fields"]["exposure_timing"], "post_diagnosis")
+        self.assertIn("exposure_timing", out["clinical"]["missing_question_fields"])
+        self.assertEqual(out["clinical"]["timing_review"]["resolution"], "unresolved_review_overrides_inherited_label")
+
     def test_alias_normalization_and_ledger_link_are_scoped_and_auditable(self):
         p = profile(ledger={"effects": [{"id": "E1", "confirmed": True, "source_reference": "table 1",
                   "fields": {"analysis_id": "A1"}}],
