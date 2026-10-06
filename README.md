@@ -1,4 +1,4 @@
-# Bio Topic Discovery with Jev
+# Bio Discovery with Jev
 
 
 **v0.3 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.
@@ -34,8 +34,8 @@ These measurements support faster categorical inspection in this configuration. 
 Python 3.10 or later:
 
 ```bash
-git clone https://github.com/hpend2373/bio-topic-discovery-with-jev.git
-cd bio-topic-discovery-with-jev
+git clone https://github.com/hpend2373/bio-discovery-with-jev.git
+cd bio-discovery-with-jev
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
