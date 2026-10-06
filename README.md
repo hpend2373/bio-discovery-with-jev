@@ -1,4 +1,4 @@
-# Bio Topic Discovery
+# Bio Topic Discovery with Jev
 
 
 **v0.3 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.

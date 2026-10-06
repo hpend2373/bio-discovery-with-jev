@@ -1,4 +1,4 @@
-# 바이오 연구 후보 전수 검사 — v0.3.0
+# Bio Topic Discovery with Jev
 
 
 **v0.3 임상 질문 모드:** [설계·원장 설정·CSV 안내](docs/clinical-pipeline.ko.md). 후보 묶음과 전체 검사 기록을 함께 제공합니다.
