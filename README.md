@@ -34,8 +34,8 @@ These measurements support faster categorical inspection in this configuration. 
 Python 3.10 or later:
 
 ```bash
-git clone https://github.com/hpend2373/bio-topic-discovery.git
-cd bio-topic-discovery
+git clone https://github.com/hpend2373/bio-topic-discovery-with-jev.git
+cd bio-topic-discovery-with-jev
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
