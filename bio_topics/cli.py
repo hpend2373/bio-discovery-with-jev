@@ -15,6 +15,8 @@ def main(argv=None):
     plan.add_argument("--input", required=True)
     plan.add_argument("--profile", required=True)
     plan.add_argument("--out", required=True)
+    plan.add_argument("--legacy-deg", action="store_true",
+                      help="Explicitly select the historical DEG row/cell/pair × operator contract")
     linkage = commands.add_parser('link-ledger', help='Exact effect-ID source ledger join; preserve inputs and export unmatched/conflict audit')
     for name in ('input','profile','ledger','out'): linkage.add_argument('--'+name, required=True)
     linkage.add_argument('--sheet')
@@ -33,6 +35,15 @@ def main(argv=None):
             from .ledger_import import prepare_effect_ledger
             result = prepare_effect_ledger(args.input,args.profile,args.ledger,args.out,args.sheet,not args.allow_unmatched,args.ledger_ci_level_percent)
         elif args.command == "plan":
+            from .ingest import read_profile
+            profile = read_profile(args.profile)
+            if profile["domain"] == "deg" and not args.legacy_deg:
+                raise ValueError(
+                    "새 DEG 작업은 근거 공유 설계를 먼저 적용하세요: docs/efficient-inspection.ko.md. "
+                    "범용 카드 실행기는 아직 통합되지 않았습니다. 기존 행·셀·쌍 계약을 "
+                    "의도적으로 선택한 경우에만 plan --legacy-deg를 사용하세요.")
+            if profile["domain"] != "deg" and args.legacy_deg:
+                raise ValueError("--legacy-deg is only valid for DEG profiles")
             result = create_plan(args.input, args.profile, args.out)
         elif args.command == "run":
             result = run(args.out, args.allow_external, args.retry_failed)
