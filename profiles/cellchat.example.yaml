@@ -1,0 +1,19 @@
+study_id: synthetic-cellchat-demo
+question: Which directed cell communication hypotheses merit follow-up?
+level: LR
+context:
+  dataset_id: demo
+  species: human
+  condition: unknown
+  patient_id: unknown
+  cellchat_version: unknown
+  database_version: unknown
+  analysis_group: unknown
+analysis_context: Unknown preprocessing, population.size, nboot and upstream filters; resolve before comparing scores.
+backend:
+  kind: laya
+  url: http://127.0.0.1:8000
+  model: multilingual
+  max_len: 8192
+  head_max_len: 384
+  timeout: 120
