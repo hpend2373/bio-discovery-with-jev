@@ -8,6 +8,10 @@ A research skill for inspecting every declared unit in DEG/omics result tables o
 
 The current engine uses categorical decisions and template-based candidate titles. Candidates need scientific review, literature checks, and concrete hypothesis development before adoption.
 
+## CellChat compatibility
+
+Inspect CellChat v1/v2 group-level CSVs or complete stored-array exports with `bio-topics cellchat`. Preserve directions, complexes, zeros and source links; distinguish partial exports from complete stored tensors. [Usage and limitations](docs/cellchat.md).
+
 ## Default: exhaustive coverage with shared evidence
 
 New work follows the [evidence-first design](docs/efficient-inspection.md): preserve every source row and requested relationship, share complete evidence cards, compute facts once, and ask only applicable scientific questions. DEG cards normally group a study's gene across requested cells and contrasts; meta-analysis retains clinical questions and compatible analysis sets. Weak, null and unresolved evidence stays in scope. Exact request bindings govern reuse; changed evidence invalidates dependent judgments.
