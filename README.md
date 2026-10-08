@@ -8,6 +8,12 @@ A research skill for inspecting every declared unit in DEG/omics result tables o
 
 The current engine uses categorical decisions and template-based candidate titles. Candidates need scientific review, literature checks, and concrete hypothesis development before adoption.
 
+## Default: exhaustive coverage with shared evidence
+
+New work follows the [evidence-first design](docs/efficient-inspection.md): preserve every source row and requested relationship, share complete evidence cards, compute facts once, and ask only applicable scientific questions. DEG cards normally group a study's gene across requested cells and contrasts; meta-analysis retains clinical questions and compatible analysis sets. Weak, null and unresolved evidence stays in scope. Exact request bindings govern reuse; changed evidence invalidates dependent judgments.
+
+This release updates the skill and adds a CLI guard: a new DEG plan using the historical row/cell/pair × operator executor requires `--legacy-deg`. **The generic gene-card executor, dependency-aware cross-run reuse and multi-card GPU batching remain implementation requirements.** Do not treat this policy update as a completed model run or a measured speedup. Existing frozen runs remain reproducible.
+
 ## v0.4: evidence paging and ledger linkage
 
 Enable `inspection.partition_long_evidence: true` for lossless, preflighted pages. Use `link-ledger` for exact effect-ID joins with complete coverage checks. [Guide](docs/long-evidence.md). Page completion does not imply one global full-context judgment.
@@ -62,7 +68,7 @@ bio-topics run --out runs/meta-jev --allow-external
 bio-topics verify --out runs/meta-jev
 ```
 
-For DEG inputs, use `examples/deg.csv` and `profiles/deg.example.yaml` or `profiles/deg.jev.example.yaml`. Examples are synthetic. For your own data, adapt the column mapping, question, declarations, and inspection scope; set `synthetic_example: false`.
+For an explicitly selected historical DEG contract, add `--legacy-deg` to `plan` and use `examples/deg.csv` and `profiles/deg.example.yaml` or `profiles/deg.jev.example.yaml`. Examples are synthetic. For your own data, adapt the column mapping, question, declarations, and inspection scope; set `synthetic_example: false`.
 
 [Backend configuration](docs/backends.md) · [한국어](docs/backends.ko.md)
 
@@ -81,13 +87,13 @@ The launcher locates the repository or the installed `bio_topics` package. Use `
 
 ```text
 CSV/Excel → mapping and preserved source values → deterministic facts
-          → every declared row, cell, pair and supported scenario → Laya / Jev
+          → shared evidence cards + declared scientific questions → Laya / Jev
           → recorded model responses → coverage verification → follow-up candidates
           → scientific review and human decisions
 ```
 
 - No FDR, top-K, score, or time cutoff removes declared inspection units.
-- Declare pair scope as `all`, `within_groups`, or `none` before execution. Exhaustive coverage applies to that declared scope.
+- Declare cards, contrasts, relationships and questions before execution. Historical pair options (`all`, `within_groups`, `none`) describe the existing executor; they are not a mandate to enumerate arbitrary pairs.
 - Weak, held, and blocked evidence remains in inspection; synthesis approval is tracked separately.
 - Resume only with matching inputs, profile, code, model, and tokenizer. Changed backends require a new run.
 - Missing, failed, or truncated model responses remain incomplete. Synthetic test responses do not prove real model coverage.
@@ -106,7 +112,7 @@ The CSV uses English field names and UTF-8 with BOM for spreadsheet compatibilit
 
 `REPORT.ko.md` and `candidates.jsonl` are supporting outputs. Full decision records remain in `decisions.jsonl` and `inspection.sqlite3`; `verify` checks response completeness and evidence bindings.
 
-Inputs include CSV/TSV/XLSX. The engine supports DEG evidence, meta-analysis evidence, declared comparisons, and limited compatible inverse-variance synthesis. Meta-regression, diagnostic-accuracy joint synthesis, complex covariance models, and automatic splitting of long evidence cards are not implemented. Unknown scientific metadata stays unknown.
+Inputs include CSV/TSV/XLSX. The engine supports DEG evidence, meta-analysis evidence, declared comparisons, and limited compatible inverse-variance synthesis. Meta-regression, diagnostic-accuracy joint synthesis, complex covariance models, are not implemented. Historical lossless paging is available; global integration of a split card is not automatically provided. Unknown scientific metadata stays unknown.
 
 Laya returns choice probabilities, which are not probabilities that a hypothesis is scientifically true. Jev request/response contracts have mock tests; live Jev execution and performance remain unverified.
 
@@ -133,4 +139,4 @@ v0.3 meta-analysis links ledgers, normalizes confirmed terminology and exports c
 - In clinical mode, `candidates.csv` contains families with complete question metadata, `review_queue.csv` holds incomplete families, and `all_candidate_families.csv` preserves every family. `candidate_effects.csv` links families in both files; `inspection_results.csv` retains all inspections. Complete question metadata does not establish synthesis eligibility.
 - Changed scientific inputs require new inspections. Existing completed runs keep their frozen code and inputs. This release does not provide automatic cross-run reuse of model receipts.
 
-The 69 synthetic software tests pass. These checks cover implementation contracts and do not establish scientific validity or live Jev performance.
+Synthetic software tests cover source and response contracts. These checks cover implementation contracts and do not establish scientific validity or live Jev performance.
