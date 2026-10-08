@@ -1,6 +1,6 @@
 ---
 name: bio-topic-discovery
-description: Inspect every declared unit of DEG/omics result tables or meta-analysis ledgers with local Laya or explicitly selected Jev to discover evidence-linked biological research questions. Use for data-driven exhaustive candidate discovery, resume and coverage verification; not raw sequencing analysis or clinical advice.
+description: Inspect every declared unit of DEG/omics tables, CellChat exports or meta-analysis ledgers with local Laya or explicitly selected Jev to discover evidence-linked biological research questions. Use for data-driven exhaustive candidate discovery, resume and coverage verification; not raw sequencing analysis or clinical advice.
 ---
 
 # Exhaustive biological research candidate inspection
@@ -50,3 +50,7 @@ Read independent counts from `analysis_sets.csv`, attached to selected effect ro
 ## v0.4
 
 Read `docs/long-evidence.md` in the engine. Enable `inspection.partition_long_evidence: true` in new profiles for preflighted, lossless pages. Verify all pages and logical parents; report local-page coverage separately from joint full-context reasoning. Use `link-ledger` with exact effect IDs, preserve all missing/conflicting/unused rows, and never reconstruct a missing source ledger by assumption.
+
+## CellChat
+
+For CellChat results, read [the CellChat workflow](references/cellchat.md). Use `cellchat plan/run/verify`; preserve all supplied edges, direction, complex/cofactor annotations and source IDs. Report provided-row versus stored-tensor coverage. Do not convert communication scores to DEG effects or infer missing edges as zero.

@@ -1,6 +1,6 @@
 ---
 name: bio-topic-discovery
-description: Inspect every declared unit of DEG/omics result tables or meta-analysis ledgers with local Laya or explicitly selected Jev to discover evidence-linked biological research questions. Use for data-driven exhaustive candidate discovery, resume and coverage verification; not raw sequencing analysis or clinical advice.
+description: Inspect every declared unit of DEG/omics tables, CellChat exports or meta-analysis ledgers with local Laya or explicitly selected Jev to discover evidence-linked biological research questions. Use for data-driven exhaustive candidate discovery, resume and coverage verification; not raw sequencing analysis or clinical advice.
 ---
 
 # 바이오 연구 후보 전수 검사
@@ -50,3 +50,7 @@ description: Inspect every declared unit of DEG/omics result tables or meta-anal
 ## v0.4
 
 엔진의 `docs/long-evidence.ko.md`를 읽습니다. 새 프로파일에 `inspection.partition_long_evidence: true`를 지정하고 모든 조각과 원래 단위의 완료를 검증합니다. 조각별 검사와 전체 근거의 공동 판단을 구분합니다. `link-ledger`로 효과 ID를 정확히 연결하고 미연결·충돌·입력 밖 원장 행을 기록합니다. 없는 원장은 추정으로 복원하지 않습니다.
+
+## CellChat
+
+CellChat 결과는 [전용 흐름](references/cellchat.ko.md)을 읽고 `cellchat plan/run/verify`로 검사합니다. 원본 전 행·방향·복합체·보조인자·추적 ID를 유지하며 제공된 행과 전체 저장 배열의 검사 범위를 구분합니다. 통신 점수를 DEG 효과로 바꾸거나 빠진 연결을 0으로 추정하지 않습니다.
