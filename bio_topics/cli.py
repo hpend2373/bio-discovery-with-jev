@@ -9,6 +9,10 @@ from .util import canonical
 
 
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "cellchat":
+        from .cellchat import main as cellchat_main
+        return cellchat_main(argv[1:])
     parser = argparse.ArgumentParser(description="DEG·메타분석 근거를 Laya/Jev가 전수 검사합니다.")
     commands = parser.add_subparsers(dest="command", required=True)
     plan = commands.add_parser("plan", help="입력 검사와 전수 목록 확정; 모델 호출 없음")
