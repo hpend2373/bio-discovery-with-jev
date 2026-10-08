@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bio-topic-discovery"
-version = "0.4.2"
+version = "0.5.0"
 description = "Exhaustive, auditable Laya/Jev inspection of biological evidence"
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6"]

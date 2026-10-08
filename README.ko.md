@@ -1,5 +1,7 @@
 # Bio Discovery with Jev
 
+**현재 버전: v0.5.0 — CellChat 호환 지원(실험 단계).** [릴리스](https://github.com/hpend2373/bio-discovery-with-jev/releases/tag/v0.5.0) · [변경 이력·버전 정책](CHANGELOG.ko.md) · [English](CHANGELOG.md)
+
 
 **v0.3 임상 질문 모드:** [설계·원장 설정·CSV 안내](docs/clinical-pipeline.ko.md). 후보 묶음과 전체 검사 기록을 함께 제공합니다.
 [English](README.md) | **한국어**

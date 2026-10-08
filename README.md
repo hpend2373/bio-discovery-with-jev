@@ -1,5 +1,7 @@
 # Bio Discovery with Jev
 
+**Current version: v0.5.0 — CellChat compatibility (experimental).** [Release](https://github.com/hpend2373/bio-discovery-with-jev/releases/tag/v0.5.0) · [Changelog and version policy](CHANGELOG.md) · [한국어](CHANGELOG.ko.md)
+
 
 **v0.3 clinical-question mode:** [ledger configuration, dependency rules and CSV outputs](docs/clinical-pipeline.md). Candidate families and exhaustive inspection records are separate deliverables.
 **English** | [한국어](README.ko.md)
