@@ -4,6 +4,10 @@
 
 See the repository `README.md` and `profiles/deg.example.yaml` / `profiles/meta.example.yaml` for supported fields. Examples are synthetic; set `synthetic_example: false` for real evidence.
 
+## Apply first to new work
+
+Read [evidence-first exhaustive inspection](efficient-inspection.md) first. The commands below describe the existing historical row/cell/pair executor, not the new gene-card executor. Creating a DEG plan with this executor requires explicit `--legacy-deg`; do not add it automatically to bypass the default design. The new gene-card executor and multi-card batching are not yet integrated.
+
 ```bash
 python3 scripts/run.py plan --input /absolute/data.csv --profile /absolute/study.yaml --out /absolute/new-run
 python3 scripts/run.py run --out /absolute/new-run
@@ -15,7 +19,7 @@ Profiles require `schema_version: 1`, `domain: deg|meta`, `question`, `columns`,
 
 `inspection.cell_fields` partitions all rows into comparison cells. Declare `pairs: all|within_groups|none`; `within_groups` requires `pair_group_by`. Choose scientific scope intentionally, such as cross-cell pairs for matching genes/comparisons or study pairs within an outcome family. `all` evaluates every n(n−1)/2 pair. Explain scope and cost at planning time.
 
-Default operators are `integrity`, `heterogeneity`, `robustness`, `bias`, `gap`, `generalizability`, `contradiction`, and `decision`. Enable `mechanism` only with sourced `knowledge_relations`. Provide source/target/type/source_reference and distinguish biological facts from assumptions.
+The historical executor uses `integrity`, `heterogeneity`, `robustness`, `bias`, `gap`, `generalizability`, `contradiction`, and `decision`. Enable `mechanism` only with sourced `knowledge_relations`. Provide source/target/type/source_reference and distinguish biological facts from assumptions.
 
 Synthesis requires explicit activation in a meta profile. Express CI levels between 0 and 1, such as 0.95. For reported SE, declare `se_scale: log` for ratio measures or `identity` for differences. Reconstruct SE from a CI only with confirmed `ci_method: wald` and `ci_distribution: normal`. Check `source_blocked`, `hold_reason`, `synthesis_approved`, and required metadata. Split cells or disable synthesis when estimands or adjustment definitions are incompatible, even if scales match.
 

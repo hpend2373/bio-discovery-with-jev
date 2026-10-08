@@ -4,6 +4,10 @@
 
 프로젝트 `README.ko.md`와 `profiles/deg.example.yaml`, `profiles/meta.example.yaml`에 지원 범위와 필드가 있습니다. 예제 데이터는 합성이므로 실제 연구에는 `synthetic_example: false`를 설정하세요.
 
+## 새 작업에 먼저 적용
+
+[근거 공유 전수 설계](efficient-inspection.ko.md)를 먼저 읽습니다. 아래 명령은 현재의 역사적 행·셀·쌍 실행기 설명입니다. 새 DEG 계약에 그대로 적용하지 않습니다. 새 DEG 계획은 `--legacy-deg`를 명시해야만 이 실행기를 사용하며, 기본 설계를 우회하려고 자동 추가하지 않습니다. 새 유전자 카드 실행기와 다중 카드 배치는 아직 통합되지 않았습니다.
+
 ```bash
 python3 scripts/run.py plan --input /absolute/data.csv --profile /absolute/study.yaml --out /absolute/new-run
 python3 scripts/run.py run --out /absolute/new-run
@@ -15,7 +19,7 @@ python3 scripts/run.py status --out /absolute/new-run
 
 `inspection.cell_fields`로 모든 행을 셀로 나눕니다. `pairs: all|within_groups|none`을 반드시 명시합니다. within_groups는 pair_group_by를 요구합니다. 같은 유전자·비교의 세포 간 쌍, 같은 결과 계열의 연구 간 쌍 등 연구 목적에 맞는 범위입니다. 필요하면 all을 사용하되 모든 n(n−1)/2개 쌍을 실제 검사합니다. 해당 범위와 비용을 계획 단계에서 알립니다.
 
-기본 연산자는 integrity, heterogeneity, robustness, bias, gap, generalizability, contradiction, decision입니다. mechanism은 출처가 있는 knowledge_relations를 선언한 경우에만 사용합니다. relation의 source/target/type/source_reference를 구체적으로 제공하고 생물학적 사실과 가정을 구분하세요.
+역사적 실행기의 연산자는 integrity, heterogeneity, robustness, bias, gap, generalizability, contradiction, decision입니다. mechanism은 출처가 있는 knowledge_relations를 선언한 경우에만 사용합니다. relation의 source/target/type/source_reference를 구체적으로 제공하고 생물학적 사실과 가정을 구분하세요.
 
 합성은 명시적으로 활성화한 meta만 지원합니다. CI 수준은 0.95처럼 0~1로 표현합니다. SE를 제공하면 비율 척도는 se_scale: log, 차이 척도는 identity를 선언합니다. CI 역산은 ci_method: wald, ci_distribution: normal을 확인한 경우만 합니다. source_blocked·hold_reason·synthesis_approved와 필수 메타데이터를 확인합니다. 같은 척도라도 추정 대상이나 보정 정의가 호환되지 않으면 셀을 나누거나 합성을 비활성화하세요.
 
