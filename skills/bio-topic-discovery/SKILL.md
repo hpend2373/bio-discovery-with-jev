@@ -26,6 +26,8 @@ Report source coverage, actual model coverage and scientific validation separate
 
 ## Workflow
 
+For DEG/omics and CellChat inputs, first read [patient/sample context](references/patient-context.md). Check supplied metadata and the comparison design; request only missing context that changes the requested interpretation. Freeze validated source links and ensure relevant context reaches actual model requests. Missing context limits claims, not the exhaustive inspection of supplied evidence. This is a skill-level intake contract, not an automatic metadata-join or statistical-adjustment feature.
+
 1. Inspect columns and study context, then create a project-specific JSON/YAML profile. Do not copy synthetic scientific definitions into real inputs. Make routine mapping decisions; clarify only unresolved scientific choices that change the result, such as estimands, comparison direction, timing, and pair scope.
 2. After verifying that the selected executor implements the declared design, run `plan` and inspect `mapping.json` and `manifest.json`. Explain source-row inclusion, declared scope, and synthesis exclusions, then continue authorized work.
 3. Run exhaustive evaluation and report progress. Share evidence across applicable questions while retaining individual judgments; distinguish single-card question batching from multi-card batching.
