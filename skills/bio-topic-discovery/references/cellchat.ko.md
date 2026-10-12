@@ -16,6 +16,8 @@
 
 ## 입력과 실행
 
+먼저 [환자·샘플 맥락 확인](patient-context.ko.md)을 적용합니다. 환자별 해석 전에 데이터셋–샘플–환자 연결, 혼합 구성과 비교 설계를 검증합니다. 선택 항목인 `patient_id` 열이 있다는 것만으로 독립 재현이나 짝지은 분석이 성립하지 않습니다.
+
 기존 CSV의 필수 열은 `source`, `target`, `interaction_name`, `prob`입니다. 나머지 원본 열도 보존합니다. 경로 표는 프로파일에 `level: pathway`를 선언하고 `interaction_name` 대신 `pathway_name`을 사용합니다. 기존 CSV는 **제공된 행만 전수 검사**하며, 빠진 연결을 0으로 채우지 않습니다.
 
 전체 저장 배열은 R에서 내보냅니다. RDS를 Python에서 직접 읽지는 않습니다.

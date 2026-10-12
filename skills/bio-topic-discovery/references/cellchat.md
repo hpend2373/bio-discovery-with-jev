@@ -16,6 +16,8 @@ Reviewed on 2026-10-08 against [jinworks/CellChat](https://github.com/jinworks/C
 
 ## Inputs and coverage
 
+First apply [patient/sample context intake](patient-context.md): validate dataset–sample–patient mappings, pooled membership and comparison design before patient-specific interpretation. An optional `patient_id` column alone does not establish independent replication or paired analysis.
+
 1. Existing CSV: preserve every supplied row and column. Required columns: `source`, `target`, `interaction_name`, `prob`. `pval`, ligand, receptor, complex/cofactor composition, pathway and evidence columns are retained when supplied. Coverage is **provided rows only**, regardless of the CSV filename. For pathway CSVs, set `level: pathway` and use `pathway_name` instead of `interaction_name`.
 2. Complete stored arrays: use the R helper below. It includes zero and non-significant entries and records axis labels, expected row counts, parameters and contexts. The Python adapter verifies the tensor grid has no missing/duplicate/foreign edges. Coverage is **all stored entries**, not all biologically possible or pre-filtered interactions.
 
